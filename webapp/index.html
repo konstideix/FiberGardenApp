@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fiber Garden MVP</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <h1>Fiber Garden</h1>
+        <p class="subtitle">MVP Web-App (Windows-testbar)</p>
+      </header>
+
+      <main>
+        <section id="tracker-tab" class="tab-panel active" aria-label="Tracker">
+          <div class="card">
+            <h2>Heute</h2>
+            <p id="daily-fiber-display" class="hero-number">0.0 g / 30 g</p>
+            <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div id="daily-progress-bar" class="progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row between">
+              <h3>🔥 Streak</h3>
+              <span id="streak-days" class="badge">0 Tage</span>
+            </div>
+            <div class="progress-track small">
+              <div id="streak-progress-bar" class="progress-fill egg"></div>
+            </div>
+            <p>Bei 7 Tagen bekommst du ein Ei.</p>
+            <p id="egg-display">Eier: 0</p>
+          </div>
+
+          <section>
+            <h3>Lebensmittel</h3>
+            <div id="foods-list" class="stack"></div>
+          </section>
+
+          <div class="card">
+            <p id="seed-display">Samen gesamt: 0</p>
+            <button id="reset-day-btn" class="btn btn-secondary">Reset Tag (Debug)</button>
+          </div>
+        </section>
+
+        <section id="garden-tab" class="tab-panel" aria-label="Garten">
+          <div class="row pills">
+            <span id="seed-pill" class="pill">🌱 Samen: 0</span>
+            <span id="egg-pill" class="pill">🥚 Eier: 0</span>
+          </div>
+
+          <div class="card" id="gate-card"></div>
+
+          <div class="card garden-placeholder">
+            <h3>Dein Garten</h3>
+            <p>Softes MVP-Placeholder-Feld</p>
+          </div>
+
+          <section>
+            <h3>Shop – Pflanzen</h3>
+            <div id="shop-list" class="stack"></div>
+          </section>
+
+          <section>
+            <h3>Tiere (Eier)</h3>
+            <div id="animals-list" class="stack"></div>
+          </section>
+
+          <section>
+            <div class="row between">
+              <h3>Dein Garten (Liste)</h3>
+              <button id="clear-garden-btn" class="btn btn-ghost">Alles entfernen</button>
+            </div>
+            <div id="placed-list" class="stack"></div>
+          </section>
+        </section>
+      </main>
+
+      <nav class="tabbar" aria-label="Tabs">
+        <button class="tab-button active" data-tab="tracker">Tracker</button>
+        <button class="tab-button" data-tab="garden">Garten</button>
+      </nav>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
