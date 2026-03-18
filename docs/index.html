@@ -77,11 +77,30 @@
 
           <article class="card" id="gate-card"></article>
 
-          <article class="card canvas-card">
-            <div class="canvas-bg">
+          <article class="card room-card">
+            <div class="title-row room-card-head">
               <div>
-                <p class="canvas-title">Dein Garten</p>
-                <p class="muted">Hier wächst später deine Welt 🌿</p>
+                <h3>Dein Gartenraum</h3>
+                <p class="section-subtitle">3D Raum mit Rasenfläche zum Platzieren und Verschieben.</p>
+              </div>
+              <button id="edit-garden-btn" class="btn btn-secondary">Bearbeiten</button>
+            </div>
+
+            <div id="edit-toolbar" class="edit-toolbar hidden">
+              <p id="edit-status" class="muted edit-status">Wähle ein Objekt und dann ein Feld.</p>
+              <div class="edit-actions">
+                <button id="place-item-btn" class="btn btn-primary" disabled>Platzieren</button>
+                <button id="cancel-edit-btn" class="btn btn-ghost">Abbrechen</button>
+              </div>
+            </div>
+
+            <div class="room-3d-shell">
+              <div class="room-3d">
+                <div class="room-wall wall-back"></div>
+                <div class="room-wall wall-left"></div>
+                <div class="room-wall wall-right"></div>
+                <div class="floor-plane" id="garden-floor"></div>
+                <div id="garden-objects" class="garden-objects"></div>
               </div>
             </div>
           </article>
