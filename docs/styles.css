@@ -172,66 +172,6 @@ body {
   align-items: center;
 }
 
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.food-top-input {
-  align-items: flex-start;
-}
-
-.food-copy {
-  flex: 1;
-  min-width: 0;
-}
-
-.food-form {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.gram-field-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px 0 12px;
-  min-height: 44px;
-  border-radius: 14px;
-  border: 1px solid var(--stroke);
-  background: var(--card-muted);
-}
-
-.gram-input {
-  width: 64px;
-  border: 0;
-  outline: none;
-  background: transparent;
-  color: var(--text);
-  font-size: 0.98rem;
-  font-weight: 650;
-}
-
-.gram-input::-webkit-outer-spin-button,
-.gram-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.gram-suffix {
-  color: var(--muted);
-  font-weight: 650;
-}
-
 .food-title,
 .shop-title,
 .placed-title {
@@ -351,8 +291,7 @@ body {
   .food-top,
   .shop-top,
   .placed-top,
-  .section-head-inline,
-  .food-form {
+  .section-head-inline {
     flex-direction: column;
     align-items: flex-start;
   }

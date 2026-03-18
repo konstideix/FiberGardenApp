@@ -1,75 +1,75 @@
 const DAILY_GOAL = 30;
 
 const foods = [
-  { id: crypto.randomUUID(), name: "Buchweizen", portionLabel: "pro 100 g", fiberGrams: 3.7 },
-  { id: crypto.randomUUID(), name: "Naturreis (Vollkornreis)", portionLabel: "pro 100 g", fiberGrams: 4.0 },
-  { id: crypto.randomUUID(), name: "Mais, Korn", portionLabel: "pro 100 g", fiberGrams: 7.7 },
-  { id: crypto.randomUUID(), name: "Hafer", portionLabel: "pro 100 g", fiberGrams: 9.3 },
-  { id: crypto.randomUUID(), name: "Weizen", portionLabel: "pro 100 g", fiberGrams: 9.6 },
-  { id: crypto.randomUUID(), name: "Dinkel", portionLabel: "pro 100 g", fiberGrams: 9.9 },
-  { id: crypto.randomUUID(), name: "Roggen", portionLabel: "pro 100 g", fiberGrams: 13.4 },
-  { id: crypto.randomUUID(), name: "Weizenmehl", portionLabel: "pro 100 g", fiberGrams: 4.0 },
-  { id: crypto.randomUUID(), name: "Weizenschrot", portionLabel: "pro 100 g", fiberGrams: 9.2 },
-  { id: crypto.randomUUID(), name: "Weizenvollkornmehl", portionLabel: "pro 100 g", fiberGrams: 10.0 },
-  { id: crypto.randomUUID(), name: "Roggenmehl", portionLabel: "pro 100 g", fiberGrams: 7.0 },
-  { id: crypto.randomUUID(), name: "Roggenschrot", portionLabel: "pro 100 g", fiberGrams: 12.0 },
-  { id: crypto.randomUUID(), name: "Roggenvollkornmehl", portionLabel: "pro 100 g", fiberGrams: 13.5 },
-  { id: crypto.randomUUID(), name: "Cornflakes", portionLabel: "pro 100 g", fiberGrams: 4.0 },
-  { id: crypto.randomUUID(), name: "Weizengrieß", portionLabel: "pro 100 g", fiberGrams: 7.1 },
-  { id: crypto.randomUUID(), name: "Haferflocken", portionLabel: "pro 100 g", fiberGrams: 9.5 },
-  { id: crypto.randomUUID(), name: "Haferkleie", portionLabel: "pro 100 g", fiberGrams: 18.6 },
-  { id: crypto.randomUUID(), name: "Weizenkleie", portionLabel: "pro 100 g", fiberGrams: 49.3 },
-  { id: crypto.randomUUID(), name: "Reis, parboiled, gekocht", portionLabel: "pro 100 g", fiberGrams: 0.6 },
-  { id: crypto.randomUUID(), name: "Nudeln, gekocht", portionLabel: "pro 100 g", fiberGrams: 1.5 },
-  { id: crypto.randomUUID(), name: "Vollkornnudeln, gekocht", portionLabel: "pro 100 g", fiberGrams: 4.4 },
-  { id: crypto.randomUUID(), name: "Butterkeks", portionLabel: "pro 100 g", fiberGrams: 1.4 },
-  { id: crypto.randomUUID(), name: "Butterkuchen", portionLabel: "pro 100 g", fiberGrams: 1.6 },
-  { id: crypto.randomUUID(), name: "Weizenbrötchen/Semmel", portionLabel: "pro 100 g", fiberGrams: 3.4 },
-  { id: crypto.randomUUID(), name: "Toastbrot", portionLabel: "pro 100 g", fiberGrams: 3.8 },
-  { id: crypto.randomUUID(), name: "Weizenmischbrot", portionLabel: "pro 100 g", fiberGrams: 4.8 },
-  { id: crypto.randomUUID(), name: "Pflaumenkuchen", portionLabel: "pro 100 g", fiberGrams: 4.9 },
-  { id: crypto.randomUUID(), name: "Zwiebelkuchen", portionLabel: "pro 100 g", fiberGrams: 4.9 },
-  { id: crypto.randomUUID(), name: "Zwieback", portionLabel: "pro 100 g", fiberGrams: 5.2 },
-  { id: crypto.randomUUID(), name: "Roggenmischbrot", portionLabel: "pro 100 g", fiberGrams: 6.0 },
-  { id: crypto.randomUUID(), name: "Weizenvollkornbrot", portionLabel: "pro 100 g", fiberGrams: 6.9 },
-  { id: crypto.randomUUID(), name: "Roggenknäckebrot", portionLabel: "pro 100 g", fiberGrams: 14.1 },
-  { id: crypto.randomUUID(), name: "Rettich", portionLabel: "pro 100 g", fiberGrams: 1.2 },
-  { id: crypto.randomUUID(), name: "Spargel", portionLabel: "pro 100 g", fiberGrams: 1.4 },
-  { id: crypto.randomUUID(), name: "Kohlrabi", portionLabel: "pro 100 g", fiberGrams: 1.5 },
-  { id: crypto.randomUUID(), name: "Blattsalat", portionLabel: "pro 100 g", fiberGrams: 1.6 },
-  { id: crypto.randomUUID(), name: "Chinakohl", portionLabel: "pro 100 g", fiberGrams: 1.7 },
-  { id: crypto.randomUUID(), name: "Blattspinat", portionLabel: "pro 100 g", fiberGrams: 1.8 },
-  { id: crypto.randomUUID(), name: "Champignons", portionLabel: "pro 100 g", fiberGrams: 1.9 },
-  { id: crypto.randomUUID(), name: "Kartoffeln", portionLabel: "pro 100 g", fiberGrams: 1.9 },
-  { id: crypto.randomUUID(), name: "Paprika, grün", portionLabel: "pro 100 g", fiberGrams: 2.0 },
-  { id: crypto.randomUUID(), name: "Rotkohl", portionLabel: "pro 100 g", fiberGrams: 2.5 },
-  { id: crypto.randomUUID(), name: "Wirsing", portionLabel: "pro 100 g", fiberGrams: 2.8 },
-  { id: crypto.randomUUID(), name: "Blumenkohl", portionLabel: "pro 100 g", fiberGrams: 2.9 },
-  { id: crypto.randomUUID(), name: "Möhren", portionLabel: "pro 100 g", fiberGrams: 2.9 },
-  { id: crypto.randomUUID(), name: "Weißkohl", portionLabel: "pro 100 g", fiberGrams: 3.0 },
-  { id: crypto.randomUUID(), name: "Rosenkohl", portionLabel: "pro 100 g", fiberGrams: 4.4 },
-  { id: crypto.randomUUID(), name: "Linsen", portionLabel: "pro 100 g", fiberGrams: 2.8 },
-  { id: crypto.randomUUID(), name: "Grüne Erbsen", portionLabel: "pro 100 g", fiberGrams: 5.0 },
-  { id: crypto.randomUUID(), name: "Weiße Bohnen", portionLabel: "pro 100 g", fiberGrams: 7.5 },
-  { id: crypto.randomUUID(), name: "Walnüsse", portionLabel: "pro 100 g", fiberGrams: 4.6 },
-  { id: crypto.randomUUID(), name: "Erdnüsse", portionLabel: "pro 100 g", fiberGrams: 7.1 },
-  { id: crypto.randomUUID(), name: "Haselnüsse", portionLabel: "pro 100 g", fiberGrams: 7.4 },
-  { id: crypto.randomUUID(), name: "Mandeln", portionLabel: "pro 100 g", fiberGrams: 9.8 },
-  { id: crypto.randomUUID(), name: "Ananas", portionLabel: "pro 100 g", fiberGrams: 1.4 },
-  { id: crypto.randomUUID(), name: "Weintrauben", portionLabel: "pro 100 g", fiberGrams: 1.6 },
-  { id: crypto.randomUUID(), name: "Pflaumen/Zwetschken", portionLabel: "pro 100 g", fiberGrams: 1.7 },
-  { id: crypto.randomUUID(), name: "Kirschen", portionLabel: "pro 100 g", fiberGrams: 1.9 },
-  { id: crypto.randomUUID(), name: "Bananen", portionLabel: "pro 100 g", fiberGrams: 2.0 },
-  { id: crypto.randomUUID(), name: "Erdbeeren", portionLabel: "pro 100 g", fiberGrams: 2.0 },
-  { id: crypto.randomUUID(), name: "Orangen", portionLabel: "pro 100 g", fiberGrams: 2.2 },
-  { id: crypto.randomUUID(), name: "Äpfel", portionLabel: "pro 100 g", fiberGrams: 2.3 },
-  { id: crypto.randomUUID(), name: "Birnen", portionLabel: "pro 100 g", fiberGrams: 2.8 },
-  { id: crypto.randomUUID(), name: "Johannisbeeren/Ribisel", portionLabel: "pro 100 g", fiberGrams: 3.5 },
-  { id: crypto.randomUUID(), name: "Sultaninen", portionLabel: "pro 100 g", fiberGrams: 5.4 },
-  { id: crypto.randomUUID(), name: "Aprikosen/Marillen", portionLabel: "pro 100 g", fiberGrams: 8.0 },
-  { id: crypto.randomUUID(), name: "Dörrpflaumen", portionLabel: "pro 100 g", fiberGrams: 9.0 },
-  { id: crypto.randomUUID(), name: "Datteln", portionLabel: "pro 100 g", fiberGrams: 9.2 },
-  { id: crypto.randomUUID(), name: "Feigen", portionLabel: "pro 100 g", fiberGrams: 9.6 }
+  { id: crypto.randomUUID(), name: "Buchweizen", portionLabel: "100 g", fiberGrams: 3.7 },
+  { id: crypto.randomUUID(), name: "Naturreis (Vollkornreis)", portionLabel: "100 g", fiberGrams: 4.0 },
+  { id: crypto.randomUUID(), name: "Mais, Korn", portionLabel: "100 g", fiberGrams: 7.7 },
+  { id: crypto.randomUUID(), name: "Hafer", portionLabel: "100 g", fiberGrams: 9.3 },
+  { id: crypto.randomUUID(), name: "Weizen", portionLabel: "100 g", fiberGrams: 9.6 },
+  { id: crypto.randomUUID(), name: "Dinkel", portionLabel: "100 g", fiberGrams: 9.9 },
+  { id: crypto.randomUUID(), name: "Roggen", portionLabel: "100 g", fiberGrams: 13.4 },
+  { id: crypto.randomUUID(), name: "Weizenmehl", portionLabel: "100 g", fiberGrams: 4.0 },
+  { id: crypto.randomUUID(), name: "Weizenschrot", portionLabel: "100 g", fiberGrams: 9.2 },
+  { id: crypto.randomUUID(), name: "Weizenvollkornmehl", portionLabel: "100 g", fiberGrams: 10.0 },
+  { id: crypto.randomUUID(), name: "Roggenmehl", portionLabel: "100 g", fiberGrams: 7.0 },
+  { id: crypto.randomUUID(), name: "Roggenschrot", portionLabel: "100 g", fiberGrams: 12.0 },
+  { id: crypto.randomUUID(), name: "Roggenvollkornmehl", portionLabel: "100 g", fiberGrams: 13.5 },
+  { id: crypto.randomUUID(), name: "Cornflakes", portionLabel: "100 g", fiberGrams: 4.0 },
+  { id: crypto.randomUUID(), name: "Weizengrieß", portionLabel: "100 g", fiberGrams: 7.1 },
+  { id: crypto.randomUUID(), name: "Haferflocken", portionLabel: "100 g", fiberGrams: 9.5 },
+  { id: crypto.randomUUID(), name: "Haferkleie", portionLabel: "100 g", fiberGrams: 18.6 },
+  { id: crypto.randomUUID(), name: "Weizenkleie", portionLabel: "100 g", fiberGrams: 49.3 },
+  { id: crypto.randomUUID(), name: "Reis, parboiled, gekocht", portionLabel: "100 g", fiberGrams: 0.6 },
+  { id: crypto.randomUUID(), name: "Nudeln, gekocht", portionLabel: "100 g", fiberGrams: 1.5 },
+  { id: crypto.randomUUID(), name: "Vollkornnudeln, gekocht", portionLabel: "100 g", fiberGrams: 4.4 },
+  { id: crypto.randomUUID(), name: "Butterkeks", portionLabel: "100 g", fiberGrams: 1.4 },
+  { id: crypto.randomUUID(), name: "Butterkuchen", portionLabel: "100 g", fiberGrams: 1.6 },
+  { id: crypto.randomUUID(), name: "Weizenbrötchen/Semmel", portionLabel: "100 g", fiberGrams: 3.4 },
+  { id: crypto.randomUUID(), name: "Toastbrot", portionLabel: "100 g", fiberGrams: 3.8 },
+  { id: crypto.randomUUID(), name: "Weizenmischbrot", portionLabel: "100 g", fiberGrams: 4.8 },
+  { id: crypto.randomUUID(), name: "Pflaumenkuchen", portionLabel: "100 g", fiberGrams: 4.9 },
+  { id: crypto.randomUUID(), name: "Zwiebelkuchen", portionLabel: "100 g", fiberGrams: 4.9 },
+  { id: crypto.randomUUID(), name: "Zwieback", portionLabel: "100 g", fiberGrams: 5.2 },
+  { id: crypto.randomUUID(), name: "Roggenmischbrot", portionLabel: "100 g", fiberGrams: 6.0 },
+  { id: crypto.randomUUID(), name: "Weizenvollkornbrot", portionLabel: "100 g", fiberGrams: 6.9 },
+  { id: crypto.randomUUID(), name: "Roggenknäckebrot", portionLabel: "100 g", fiberGrams: 14.1 },
+  { id: crypto.randomUUID(), name: "Rettich", portionLabel: "100 g", fiberGrams: 1.2 },
+  { id: crypto.randomUUID(), name: "Spargel", portionLabel: "100 g", fiberGrams: 1.4 },
+  { id: crypto.randomUUID(), name: "Kohlrabi", portionLabel: "100 g", fiberGrams: 1.5 },
+  { id: crypto.randomUUID(), name: "Blattsalat", portionLabel: "100 g", fiberGrams: 1.6 },
+  { id: crypto.randomUUID(), name: "Chinakohl", portionLabel: "100 g", fiberGrams: 1.7 },
+  { id: crypto.randomUUID(), name: "Blattspinat", portionLabel: "100 g", fiberGrams: 1.8 },
+  { id: crypto.randomUUID(), name: "Champignons", portionLabel: "100 g", fiberGrams: 1.9 },
+  { id: crypto.randomUUID(), name: "Kartoffeln", portionLabel: "100 g", fiberGrams: 1.9 },
+  { id: crypto.randomUUID(), name: "Paprika, grün", portionLabel: "100 g", fiberGrams: 2.0 },
+  { id: crypto.randomUUID(), name: "Rotkohl", portionLabel: "100 g", fiberGrams: 2.5 },
+  { id: crypto.randomUUID(), name: "Wirsing", portionLabel: "100 g", fiberGrams: 2.8 },
+  { id: crypto.randomUUID(), name: "Blumenkohl", portionLabel: "100 g", fiberGrams: 2.9 },
+  { id: crypto.randomUUID(), name: "Möhren", portionLabel: "100 g", fiberGrams: 2.9 },
+  { id: crypto.randomUUID(), name: "Weißkohl", portionLabel: "100 g", fiberGrams: 3.0 },
+  { id: crypto.randomUUID(), name: "Rosenkohl", portionLabel: "100 g", fiberGrams: 4.4 },
+  { id: crypto.randomUUID(), name: "Linsen", portionLabel: "100 g", fiberGrams: 2.8 },
+  { id: crypto.randomUUID(), name: "Grüne Erbsen", portionLabel: "100 g", fiberGrams: 5.0 },
+  { id: crypto.randomUUID(), name: "Weiße Bohnen", portionLabel: "100 g", fiberGrams: 7.5 },
+  { id: crypto.randomUUID(), name: "Walnüsse", portionLabel: "100 g", fiberGrams: 4.6 },
+  { id: crypto.randomUUID(), name: "Erdnüsse", portionLabel: "100 g", fiberGrams: 7.1 },
+  { id: crypto.randomUUID(), name: "Haselnüsse", portionLabel: "100 g", fiberGrams: 7.4 },
+  { id: crypto.randomUUID(), name: "Mandeln", portionLabel: "100 g", fiberGrams: 9.8 },
+  { id: crypto.randomUUID(), name: "Ananas", portionLabel: "100 g", fiberGrams: 1.4 },
+  { id: crypto.randomUUID(), name: "Weintrauben", portionLabel: "100 g", fiberGrams: 1.6 },
+  { id: crypto.randomUUID(), name: "Pflaumen/Zwetschken", portionLabel: "100 g", fiberGrams: 1.7 },
+  { id: crypto.randomUUID(), name: "Kirschen", portionLabel: "100 g", fiberGrams: 1.9 },
+  { id: crypto.randomUUID(), name: "Bananen", portionLabel: "100 g", fiberGrams: 2.0 },
+  { id: crypto.randomUUID(), name: "Erdbeeren", portionLabel: "100 g", fiberGrams: 2.0 },
+  { id: crypto.randomUUID(), name: "Orangen", portionLabel: "100 g", fiberGrams: 2.2 },
+  { id: crypto.randomUUID(), name: "Äpfel", portionLabel: "100 g", fiberGrams: 2.3 },
+  { id: crypto.randomUUID(), name: "Birnen", portionLabel: "100 g", fiberGrams: 2.8 },
+  { id: crypto.randomUUID(), name: "Johannisbeeren/Ribisel", portionLabel: "100 g", fiberGrams: 3.5 },
+  { id: crypto.randomUUID(), name: "Sultaninen", portionLabel: "100 g", fiberGrams: 5.4 },
+  { id: crypto.randomUUID(), name: "Aprikosen/Marillen", portionLabel: "100 g", fiberGrams: 8.0 },
+  { id: crypto.randomUUID(), name: "Dörrpflaumen", portionLabel: "100 g", fiberGrams: 9.0 },
+  { id: crypto.randomUUID(), name: "Datteln", portionLabel: "100 g", fiberGrams: 9.2 },
+  { id: crypto.randomUUID(), name: "Feigen", portionLabel: "100 g", fiberGrams: 9.6 }
 ];
 
 const shopItems = [
@@ -218,51 +218,30 @@ function renderFoods() {
 
   els.foodsList.innerHTML = filteredFoods
     .map((food) => {
-      const defaultGrams = 100;
-      const estimatedFiber = calculateFiberForGrams(food.fiberGrams, defaultGrams);
-      const seedReward = Math.floor(estimatedFiber);
-
+      const seedReward = Math.floor(food.fiberGrams);
       return `
         <article class="food-item" aria-label="${food.name}">
-          <div class="food-top food-top-input">
-            <div class="food-copy">
+          <div class="food-top">
+            <div>
               <p class="food-title">${food.name}</p>
-              <p class="food-subline">${food.portionLabel} · ${food.fiberGrams.toFixed(1)} g Ballaststoffe · ca. +${seedReward} Seeds bei 100 g</p>
+              <p class="food-subline">${food.portionLabel} · ${food.fiberGrams.toFixed(1)} g Ballaststoffe · +${seedReward} Seeds</p>
             </div>
-            <form class="food-form" data-food-id="${food.id}">
-              <label class="sr-only" for="grams-${food.id}">${food.name} Gramm</label>
-              <div class="gram-field-wrap">
-                <input id="grams-${food.id}" class="gram-input" type="number" min="1" step="1" inputmode="numeric" value="100" aria-label="${food.name} Gramm" />
-                <span class="gram-suffix">g</span>
-              </div>
-              <button class="btn btn-primary" type="submit">Hinzufügen</button>
-            </form>
+            <button class="btn btn-primary" data-food-id="${food.id}">+ 100 g</button>
           </div>
         </article>
       `;
     })
     .join("");
 
-  els.foodsList.querySelectorAll(".food-form").forEach((form) => {
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-
-      const food = foods.find((entry) => entry.id === form.dataset.foodId);
+  els.foodsList.querySelectorAll("[data-food-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const food = foods.find((entry) => entry.id === button.dataset.foodId);
       if (!food) return;
 
-      const input = form.querySelector(".gram-input");
-      const grams = Number.parseInt(input.value, 10);
-      if (!Number.isFinite(grams) || grams <= 0) {
-        input.focus();
-        return;
-      }
-
-      const addedFiber = calculateFiberForGrams(food.fiberGrams, grams);
-      const seedReward = Math.floor(addedFiber);
-
-      state.dailyFiber += addedFiber;
+      const seedReward = Math.floor(food.fiberGrams);
+      state.dailyFiber += food.fiberGrams;
       state.totalSeeds += seedReward;
-      state.dailyFoodsLog[food.name] = (state.dailyFoodsLog[food.name] || 0) + grams;
+      state.dailyFoodsLog[food.name] = (state.dailyFoodsLog[food.name] || 0) + 1;
 
       processGoalReachedIfNeeded();
       lightHaptic();
@@ -378,10 +357,6 @@ function renderPlacedItems() {
       `;
     })
     .join("");
-}
-
-function calculateFiberForGrams(fiberPer100Grams, grams) {
-  return (fiberPer100Grams * grams) / 100;
 }
 
 function processGoalReachedIfNeeded(now = new Date()) {
