@@ -431,6 +431,121 @@ body {
   background: linear-gradient(180deg, rgba(114, 220, 255, 0.92), rgba(54, 154, 225, 0.92));
   box-shadow: inset 0 3px 10px rgba(255, 255, 255, 0.22);
 }
+.scene-birds {
+  position: absolute;
+  width: 34px;
+  height: 14px;
+  border-top: 2px solid rgba(69, 103, 132, 0.7);
+  border-radius: 50%;
+  opacity: 0.55;
+}
+.scene-birds::after {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 14px;
+  left: 16px;
+  top: -2px;
+  border-top: 2px solid rgba(69, 103, 132, 0.7);
+  border-radius: 50%;
+}
+.bird-a { left: 110px; top: 58px; animation: birdFloat 9s ease-in-out infinite; }
+.bird-b { right: 112px; top: 112px; transform: scale(0.8); animation: birdFloat 11s ease-in-out infinite reverse; }
+@keyframes birdFloat {
+  0%,100% { transform: translateX(0) translateY(0); }
+  50% { transform: translateX(8px) translateY(-4px); }
+}
+.garden-rock,
+.grass-clump,
+.garden-foreground,
+.garden-room-caption,
+.garden-empty-overlay { position: absolute; }
+.garden-rock {
+  width: 26px;
+  height: 18px;
+  border-radius: 48% 52% 42% 58%;
+  background: linear-gradient(180deg, #f3f5f7, #cfd7df);
+  box-shadow: inset 0 -4px 8px rgba(55, 66, 82, 0.15);
+}
+.rock-a { left: 94px; bottom: 116px; transform: rotate(-12deg); }
+.rock-b { right: 92px; bottom: 146px; transform: rotate(8deg) scale(0.84); }
+.grass-clump {
+  width: 18px;
+  height: 28px;
+  border-radius: 60% 40% 70% 30%;
+  background: linear-gradient(180deg, #8bec99, #3db860);
+  box-shadow: inset 0 -6px 8px rgba(35, 83, 49, 0.18);
+  animation: plantSway 3.8s ease-in-out infinite;
+}
+.grass-a { left: 122px; bottom: 118px; }
+.grass-b { right: 118px; bottom: 103px; animation-delay: -1s; }
+.grass-c { left: 188px; bottom: 88px; transform: scale(0.9); animation-delay: -2s; }
+.garden-foreground {
+  left: -8%;
+  right: -8%;
+  bottom: -10px;
+  height: 92px;
+  background:
+    radial-gradient(60px 24px at 18% 30%, rgba(56, 155, 88, 0.65), transparent 70%),
+    radial-gradient(90px 32px at 48% 52%, rgba(49, 142, 80, 0.7), transparent 72%),
+    radial-gradient(68px 24px at 78% 38%, rgba(56, 155, 88, 0.62), transparent 70%);
+  filter: blur(6px);
+  opacity: 0.8;
+}
+.garden-room-caption {
+  left: 18px;
+  top: 16px;
+  max-width: 210px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  box-shadow: 0 8px 22px rgba(30, 55, 82, 0.08);
+}
+.garden-room-caption h3 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  line-height: 1.08;
+}
+.garden-room-caption p {
+  margin: 7px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.caption-kicker {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(119, 226, 155, 0.3);
+  color: #1a7a3f;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.garden-empty-overlay {
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  width: 220px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 26px rgba(18, 38, 26, 0.1);
+  text-align: center;
+}
+.garden-empty-overlay.hidden { display: none; }
+.garden-empty-overlay h4 { margin: 0; }
+.garden-empty-overlay p {
+  margin: 8px 0 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
 .garden-flowerbed {
   width: 62px;
   height: 30px;
@@ -496,6 +611,14 @@ body {
   color: white;
   text-shadow: 0 1px 0 rgba(0,0,0,0.18);
   box-shadow: 0 12px 18px rgba(19, 34, 21, 0.18);
+  overflow: hidden;
+}
+.garden-item-core {
+  position: absolute;
+  inset: auto 10px 6px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(18, 47, 25, 0.12);
 }
 .garden-item-shadow {
   position: absolute;
@@ -538,7 +661,11 @@ body {
 .garden-item.preview.invalid .garden-item-body { box-shadow: 0 18px 24px rgba(19, 34, 21, 0.2), 0 0 0 3px rgba(255, 117, 117, 0.26); opacity: 0.8; }
 .garden-item.plant .garden-item-body { animation: plantSway 4.4s ease-in-out infinite; }
 .garden-item.decoration .garden-item-body { animation: decorBob 6s ease-in-out infinite; }
-.garden-item.animal .garden-item-body { transition: transform 260ms ease; }
+.garden-item.animal .garden-item-body { transition: transform 260ms ease; animation: animalBob 1.6s ease-in-out infinite; }
+@keyframes animalBob {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
 @keyframes plantSway {
   0%,100% { transform: rotate(-1.8deg) translateY(0); }
   50% { transform: rotate(1.8deg) translateY(-2px); }
@@ -549,8 +676,11 @@ body {
 }
 
 .garden-item-sprite {
-  font-size: 1.8rem;
+  position: relative;
+  z-index: 1;
+  font-size: 1.9rem;
   line-height: 1;
+  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.14));
 }
 .garden-item.rare .garden-item-body::after {
   content: "";

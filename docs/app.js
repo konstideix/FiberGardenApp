@@ -156,6 +156,7 @@ const els = {
   gardenViewport: document.getElementById("garden-viewport"),
   gardenScene: document.getElementById("garden-scene"),
   gardenGrid: document.getElementById("garden-grid"),
+  gardenEmptyOverlay: document.getElementById("garden-empty-overlay"),
   gardenObjects: document.getElementById("garden-objects")
 };
 
@@ -441,6 +442,10 @@ function renderAnimals(unlocked) {
 
 function renderGardenScene() {
   els.gardenGrid.classList.toggle("visible", editMode);
+  els.gardenEmptyOverlay.classList.toggle("hidden", state.placedItems.length > 0 || Boolean(draftPlacement));
+  if (!state.placedItems.length && !draftPlacement) {
+    els.gardenEmptyOverlay.innerHTML = `<h4>Der Raum wartet auf Belohnungen</h4><p>Dein Garten wird mit jeder Pflanze und jedem Tier gemütlicher. Kaufe im Shop und ziehe neue Schätze in dein Diorama.</p>`;
+  }
   renderGrid();
   renderSceneObjects();
 }
@@ -508,8 +513,8 @@ function renderSceneObjects() {
 
 function renderStaticObject(item) {
   const screen = gridToScreen(item.position.x, item.position.y);
-  const width = item.kind === "plant" ? 58 : 54;
-  const height = item.kind === "plant" ? 72 : 48;
+  const width = item.kind === "plant" ? 64 : 58;
+  const height = item.kind === "plant" ? 84 : 52;
   const rareClass = item.rarity === "rare" ? "rare" : "";
   const selected = draftPlacement?.id === item.id || selectedPlacedItemId === item.id ? "selected" : "";
   return {
@@ -519,6 +524,7 @@ function renderStaticObject(item) {
         <span class="garden-item-shadow"></span>
         <span class="garden-item-body" style="width:${width}px; height:${height}px; transform: rotate(${item.rotation || 0}deg);">
           <span class="garden-item-sprite">${item.symbolName}</span>
+          <span class="garden-item-core"></span>
         </span>
         <span class="garden-item-label">${item.name}</span>
       </button>
@@ -534,8 +540,9 @@ function renderAnimal(item) {
     html: `
       <div class="garden-item animal" data-animal-id="${item.id}" style="left:${screen.x}px; bottom:${screen.y}px;">
         <span class="garden-item-shadow"></span>
-        <span class="garden-item-body" style="width:54px; height:54px; transform: scaleX(${runtime.facing});">
+        <span class="garden-item-body" style="width:56px; height:56px; transform: scaleX(${runtime.facing});">
           <span class="garden-item-sprite">${item.symbolName}</span>
+          <span class="garden-item-core"></span>
         </span>
         <span class="garden-item-label">${item.name}</span>
       </div>
@@ -551,8 +558,9 @@ function renderDraftObject(item) {
     html: `
       <div class="garden-item ${item.kind || item.type} preview ${valid ? "valid" : "invalid"}" style="left:${screen.x}px; bottom:${screen.y}px;">
         <span class="garden-item-shadow"></span>
-        <span class="garden-item-body" style="width:${item.type === "animal" ? 54 : 58}px; height:${item.type === "animal" ? 54 : 72}px; transform: rotate(${item.rotation || 0}deg);">
+        <span class="garden-item-body" style="width:${item.type === "animal" ? 56 : 64}px; height:${item.type === "animal" ? 56 : 84}px; transform: rotate(${item.rotation || 0}deg);">
           <span class="garden-item-sprite">${item.symbolName}</span>
+          <span class="garden-item-core"></span>
         </span>
         <span class="garden-item-label">${item.name}</span>
       </div>
