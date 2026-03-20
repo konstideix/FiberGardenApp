@@ -16,6 +16,10 @@ final class AppStateViewModel: ObservableObject {
         didSet { savePlacedItems() }
     }
 
+    @Published var inventoryItems: [InventoryItem] = [] {
+        didSet { saveInventoryItems() }
+    }
+
     @Published var dailyFiber: Double = 0 {
         didSet { userDefaults.set(dailyFiber, forKey: Keys.dailyFiber) }
     }
@@ -36,13 +40,30 @@ final class AppStateViewModel: ObservableObject {
         didSet { userDefaults.set(lastGoalDateString, forKey: Keys.lastGoalDateString) }
     }
 
+    @Published var selectedPlacementItemID: InventoryItem.ID?
+
     private let userDefaults = UserDefaults.standard
     private let calendar = Calendar.current
+
+    enum Habitat {
+        static let columns = 7
+        static let rows = 7
+        static let blockedCells: Set<HabitatCell> = [
+            HabitatCell(x: 1, y: 1),
+            HabitatCell(x: 4, y: 1),
+            HabitatCell(x: 2, y: 4)
+        ]
+        static let preferredPathCells: Set<HabitatCell> = [
+            HabitatCell(x: 1, y: 5), HabitatCell(x: 2, y: 5), HabitatCell(x: 3, y: 5), HabitatCell(x: 4, y: 5),
+            HabitatCell(x: 4, y: 4), HabitatCell(x: 5, y: 4)
+        ]
+    }
 
     private enum Keys {
         static let totalSeeds = "totalSeeds"
         static let totalEggs = "totalEggs"
         static let placedItems = "placedItems"
+        static let inventoryItems = "inventoryItems"
         static let dailyFiber = "dailyFiber"
         static let dailyFoodsLog = "dailyFoodsLog"
         static let lastDateString = "lastDateString"
@@ -64,54 +85,52 @@ final class AppStateViewModel: ObservableObject {
     ]
 
     let shopItems: [ShopItem] = [
-        ShopItem(name: "Kirschbaum", seedCost: 50, symbolName: "tree.fill"),
-        ShopItem(name: "Blumenbeet", seedCost: 20, symbolName: "leaf.fill"),
-        ShopItem(name: "Steinpfad", seedCost: 35, symbolName: "square.grid.3x3.fill")
+        ShopItem(name: "Kirschbaum", seedCost: 50, symbolName: "tree.fill", kind: .cherryTree),
+        ShopItem(name: "Blumenbeet", seedCost: 20, symbolName: "leaf.fill", kind: .flowerBed),
+        ShopItem(name: "Felsgruppe", seedCost: 24, symbolName: "mountain.2.fill", kind: .rockCluster),
+        ShopItem(name: "Steinpfad", seedCost: 18, symbolName: "square.grid.3x3.fill", kind: .stonePath),
+        ShopItem(name: "Teich", seedCost: 40, symbolName: "drop.fill", kind: .pond)
     ]
 
     let animalItems: [AnimalItem] = [
-        AnimalItem(name: "Ameise", eggCost: 1, symbolName: "ant.fill"),
-        AnimalItem(name: "Katze", eggCost: 4, symbolName: "pawprint.fill")
+        AnimalItem(name: "Ameise", eggCost: 1, symbolName: "ant.fill", species: .ant),
+        AnimalItem(name: "Katze", eggCost: 4, symbolName: "pawprint.fill", species: .cat)
     ]
 
     init() {
         loadPersistedState()
         checkDateRollover()
         validateStreakAcrossMissedDays()
+        normalizeHabitatStateIfNeeded()
     }
 
-    var dailyProgress: Double {
-        min(max(dailyFiber / dailyGoal, 0), 1)
+    var dailyProgress: Double { min(max(dailyFiber / dailyGoal, 0), 1) }
+    var gramsUntilUnlock: Double { max(0, dailyGoal - dailyFiber) }
+    var gardenUnlockedToday: Bool { dailyFiber >= dailyGoal }
+    var daysToNextEggProgress: Double { Double(streakCount % 7) / 7.0 }
+    var daysInCurrentEggCycle: Int { streakCount % 7 }
+
+    var habitatCells: [HabitatCell] {
+        (0..<Habitat.rows).flatMap { y in
+            (0..<Habitat.columns).map { x in HabitatCell(x: x, y: y) }
+        }
     }
 
-    var gramsUntilUnlock: Double {
-        max(0, dailyGoal - dailyFiber)
+    var validPlacementCells: [HabitatCell] {
+        habitatCells.filter(isPlacementCellAvailable(_:))
     }
 
-    var gardenUnlockedToday: Bool {
-        dailyFiber >= dailyGoal
-    }
-
-    var daysToNextEggProgress: Double {
-        Double(streakCount % 7) / 7.0
-    }
-
-    var daysInCurrentEggCycle: Int {
-        streakCount % 7
+    var selectedPlacementItem: InventoryItem? {
+        inventoryItems.first(where: { $0.id == selectedPlacementItemID })
     }
 
     func checkDateRollover(now: Date = Date()) {
         let today = dateString(for: now)
-
         guard !lastDateString.isEmpty else {
             lastDateString = today
             return
         }
-
-        guard today != lastDateString else {
-            return
-        }
-
+        guard today != lastDateString else { return }
         dailyFiber = 0
         dailyFoodsLog = [:]
         lastDateString = today
@@ -124,27 +143,56 @@ final class AppStateViewModel: ObservableObject {
             totalSeeds += food.seedReward
             dailyFoodsLog[food.name, default: 0] += 1
         }
-
-        let feedback = UIImpactFeedbackGenerator(style: .soft)
-        feedback.impactOccurred()
-
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
         processGoalReachedIfNeeded()
     }
 
     func buyDecoration(_ item: ShopItem) {
         guard gardenUnlockedToday, totalSeeds >= item.seedCost else { return }
-
         totalSeeds -= item.seedCost
-        placedItems.append(PlacedItem(type: .decoration, name: item.name, symbolName: item.symbolName))
+        let inventoryItem = InventoryItem(type: .decoration, name: item.name, symbolName: item.symbolName, assetKey: item.kind.rawValue)
+        inventoryItems.append(inventoryItem)
+        selectedPlacementItemID = inventoryItem.id
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }
 
     func hatchAnimal(_ item: AnimalItem) {
         guard gardenUnlockedToday, totalEggs >= item.eggCost else { return }
-
         totalEggs -= item.eggCost
-        placedItems.append(PlacedItem(type: .animal, name: item.name, symbolName: item.symbolName))
+        let inventoryItem = InventoryItem(type: .animal, name: item.name, symbolName: item.symbolName, assetKey: item.species.rawValue)
+        inventoryItems.append(inventoryItem)
+        selectedPlacementItemID = inventoryItem.id
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    func selectPlacementItem(_ item: InventoryItem?) {
+        selectedPlacementItemID = item?.id
+    }
+
+    func placeSelectedItem(at cell: HabitatCell) {
+        guard gardenUnlockedToday,
+              let selected = selectedPlacementItem,
+              isPlacementCellAvailable(cell, for: selected) else { return }
+
+        placedItems.append(
+            PlacedItem(
+                type: selected.type,
+                name: selected.name,
+                symbolName: selected.symbolName,
+                assetKey: selected.assetKey,
+                cell: cell
+            )
+        )
+        inventoryItems.removeAll { $0.id == selected.id }
+        selectedPlacementItemID = inventoryItems.first?.id
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    func removePlacedItem(_ item: PlacedItem) {
+        placedItems.removeAll { $0.id == item.id }
+        let inventoryItem = InventoryItem(type: item.type, name: item.name, symbolName: item.symbolName, assetKey: item.assetKey)
+        inventoryItems.append(inventoryItem)
+        selectedPlacementItemID = inventoryItem.id
     }
 
     func resetDayDebug() {
@@ -153,18 +201,49 @@ final class AppStateViewModel: ObservableObject {
     }
 
     func clearGardenDebug() {
+        let recovered = placedItems.map {
+            InventoryItem(type: $0.type, name: $0.name, symbolName: $0.symbolName, assetKey: $0.assetKey)
+        }
         placedItems = []
+        inventoryItems.append(contentsOf: recovered)
+        selectedPlacementItemID = inventoryItems.first?.id
+    }
+
+    func isPlacementCellAvailable(_ cell: HabitatCell, for item: InventoryItem? = nil) -> Bool {
+        guard habitatCells.contains(cell), !Habitat.blockedCells.contains(cell) else { return false }
+        if placedItems.contains(where: { $0.cell == cell }) { return false }
+        guard let item else { return true }
+        if item.type == .animal { return cell.y >= 2 }
+        if item.assetKey == DecorationKind.stonePath.rawValue { return Habitat.preferredPathCells.contains(cell) }
+        if item.assetKey == DecorationKind.pond.rawValue { return !Habitat.preferredPathCells.contains(cell) && cell.y <= 3 }
+        return true
+    }
+
+    private func normalizeHabitatStateIfNeeded() {
+        let allowedCells = Set(habitatCells).subtracting(Habitat.blockedCells)
+        placedItems = placedItems.enumerated().map { index, item in
+            if allowedCells.contains(item.cell) && !placedItems[..<index].contains(where: { $0.cell == item.cell }) {
+                return item
+            }
+            let fallbackCell = firstOpenCell(preferredFor: item.type, assetKey: item.assetKey) ?? HabitatCell(x: 3, y: 3)
+            return PlacedItem(id: item.id, type: item.type, name: item.name, symbolName: item.symbolName, assetKey: item.assetKey, cell: fallbackCell, datePlaced: item.datePlaced)
+        }
+        if selectedPlacementItemID == nil {
+            selectedPlacementItemID = inventoryItems.first?.id
+        }
+    }
+
+    private func firstOpenCell(preferredFor type: PlacedItemType, assetKey: String? = nil) -> HabitatCell? {
+        let placeholder = InventoryItem(type: type, name: "", symbolName: "", assetKey: assetKey ?? "")
+        return habitatCells.first { cell in
+            isPlacementCellAvailable(cell, for: placeholder)
+        }
     }
 
     private func processGoalReachedIfNeeded(now: Date = Date()) {
         guard dailyFiber >= dailyGoal else { return }
-
         let today = dateString(for: now)
-
-        guard lastGoalDateString != today else {
-            return
-        }
-
+        guard lastGoalDateString != today else { return }
         if let lastGoalDateString,
            let lastGoalDate = date(from: lastGoalDateString),
            calendar.isDate(lastGoalDate, inSameDayAs: calendar.date(byAdding: .day, value: -1, to: now) ?? now) {
@@ -172,27 +251,16 @@ final class AppStateViewModel: ObservableObject {
         } else {
             streakCount = 1
         }
-
         lastGoalDateString = today
-
-        if streakCount % 7 == 0 {
-            totalEggs += 1
-        }
+        if streakCount % 7 == 0 { totalEggs += 1 }
     }
 
     private func validateStreakAcrossMissedDays(referenceDate: Date = Date()) {
-        guard let lastGoalDateString,
-              let lastGoalDate = date(from: lastGoalDateString) else {
-            return
-        }
-
+        guard let lastGoalDateString, let lastGoalDate = date(from: lastGoalDateString) else { return }
         let startOfLastGoal = calendar.startOfDay(for: lastGoalDate)
         let startOfToday = calendar.startOfDay(for: referenceDate)
         let dayDiff = calendar.dateComponents([.day], from: startOfLastGoal, to: startOfToday).day ?? 0
-
-        if dayDiff > 1 {
-            streakCount = 0
-        }
+        if dayDiff > 1 { streakCount = 0 }
     }
 
     private func loadPersistedState() {
@@ -208,6 +276,11 @@ final class AppStateViewModel: ObservableObject {
             placedItems = decoded
         }
 
+        if let data = userDefaults.data(forKey: Keys.inventoryItems),
+           let decoded = try? JSONDecoder().decode([InventoryItem].self, from: data) {
+            inventoryItems = decoded
+        }
+
         if let data = userDefaults.data(forKey: Keys.dailyFoodsLog),
            let decoded = try? JSONDecoder().decode([String: Int].self, from: data) {
             dailyFoodsLog = decoded
@@ -217,6 +290,11 @@ final class AppStateViewModel: ObservableObject {
     private func savePlacedItems() {
         guard let data = try? JSONEncoder().encode(placedItems) else { return }
         userDefaults.set(data, forKey: Keys.placedItems)
+    }
+
+    private func saveInventoryItems() {
+        guard let data = try? JSONEncoder().encode(inventoryItems) else { return }
+        userDefaults.set(data, forKey: Keys.inventoryItems)
     }
 
     private func saveDailyFoodsLog() {
