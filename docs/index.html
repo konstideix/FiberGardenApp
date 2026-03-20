@@ -68,38 +68,43 @@
         </section>
 
         <section id="garden-tab" class="tab-panel" aria-label="Garten">
-          <article class="card stats-card">
+          <article class="garden-hud card glass-card">
             <div class="pill-row">
               <span id="seed-pill" class="pill">🌱 Silo: 0</span>
               <span id="egg-pill" class="pill">🥚 Eier: 0</span>
+            </div>
+            <div class="garden-hud-actions">
+              <button id="edit-garden-btn" class="btn btn-secondary">Bearbeiten</button>
             </div>
           </article>
 
           <article class="card" id="gate-card"></article>
 
-          <article class="card room-card">
-            <div class="title-row room-card-head">
-              <div>
-                <h3>Dein Gartenraum</h3>
-                <p class="section-subtitle">3D Raum mit Rasenfläche zum Platzieren und Verschieben.</p>
-              </div>
-              <button id="edit-garden-btn" class="btn btn-secondary">Bearbeiten</button>
-            </div>
-
+          <article class="garden-diorama card">
             <div id="edit-toolbar" class="edit-toolbar hidden">
-              <p id="edit-status" class="muted edit-status">Wähle ein Objekt und dann ein Feld.</p>
+              <p id="edit-status" class="muted edit-status">Wähle ein Objekt und dann eine Position im Garten.</p>
               <div class="edit-actions">
                 <button id="place-item-btn" class="btn btn-primary" disabled>Platzieren</button>
                 <button id="cancel-edit-btn" class="btn btn-ghost">Abbrechen</button>
               </div>
             </div>
 
-            <div class="room-3d-shell">
-              <div class="room-3d">
-                <div class="room-wall wall-back"></div>
-                <div class="room-wall wall-left"></div>
-                <div class="room-wall wall-right"></div>
-                <div class="floor-plane" id="garden-floor"></div>
+            <div id="garden-viewport" class="garden-viewport" aria-label="Gartenraum">
+              <div id="garden-scene" class="garden-scene">
+                <div class="sky-layer"></div>
+                <div class="sun-glow"></div>
+                <div class="cloud cloud-a"></div>
+                <div class="cloud cloud-b"></div>
+                <div class="far-hills"></div>
+                <div class="scene-sparkles sparkle-a"></div>
+                <div class="scene-sparkles sparkle-b"></div>
+                <div class="garden-island-shadow"></div>
+                <div class="garden-island"></div>
+                <div class="garden-path"></div>
+                <div class="garden-pond"></div>
+                <div class="garden-flowerbed flowerbed-a"></div>
+                <div class="garden-flowerbed flowerbed-b"></div>
+                <div id="garden-grid" class="garden-grid hidden"></div>
                 <div id="garden-objects" class="garden-objects"></div>
               </div>
             </div>

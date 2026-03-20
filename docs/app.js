@@ -1,9 +1,15 @@
 const DAILY_GOAL = 30;
-const GRID_SIZE = 5;
-const TILE_SIZE = 44;
-const TILE_GAP = 6;
-const FLOOR_SIZE = TILE_SIZE * GRID_SIZE + TILE_GAP * (GRID_SIZE - 1);
-const FLOOR_BOTTOM_OFFSET = 34;
+const GRID_COLS = 6;
+const GRID_ROWS = 4;
+const SCENE_CENTER_X = 180;
+const ISLAND_CENTER_Y = 222;
+const GRID_STEP_X = 32;
+const GRID_STEP_Y = 19;
+const SHOP_ITEM_KIND = {
+  "Kirschbaum": "plant",
+  "Blumenbeet": "plant",
+  "Steinpfad": "decoration"
+};
 
 const foods = [
   { id: crypto.randomUUID(), name: "Buchweizen", portionLabel: "pro 100 g", fiberGrams: 3.7 },
@@ -99,6 +105,16 @@ const defaultState = {
   lastGoalDateString: null
 };
 
+const gardenRuntime = {
+  camera: { x: 0, y: 0 },
+  dragging: false,
+  pointerStart: null,
+  cameraStart: null,
+  animalMotion: new Map(),
+  loopId: null,
+  lastFrame: 0
+};
+
 let state = loadState();
 let searchTerm = "";
 let editMode = false;
@@ -137,12 +153,15 @@ const els = {
   editStatus: document.getElementById("edit-status"),
   placeItemBtn: document.getElementById("place-item-btn"),
   cancelEditBtn: document.getElementById("cancel-edit-btn"),
-  gardenFloor: document.getElementById("garden-floor"),
+  gardenViewport: document.getElementById("garden-viewport"),
+  gardenScene: document.getElementById("garden-scene"),
+  gardenGrid: document.getElementById("garden-grid"),
   gardenObjects: document.getElementById("garden-objects")
 };
 
 bindEvents();
 render();
+startAnimalLoop();
 
 function bindEvents() {
   els.tabButtons.forEach((btn) => {
@@ -158,6 +177,7 @@ function bindEvents() {
 
   els.clearGardenBtn.addEventListener("click", () => {
     state.placedItems = [];
+    gardenRuntime.animalMotion.clear();
     draftPlacement = null;
     selectedPlacedItemId = null;
     persist();
@@ -188,6 +208,42 @@ function bindEvents() {
   els.placeItemBtn.addEventListener("click", () => {
     commitPlacement();
   });
+
+  bindCameraPan();
+}
+
+function bindCameraPan() {
+  const startDrag = (clientX, clientY) => {
+    gardenRuntime.dragging = true;
+    gardenRuntime.pointerStart = { x: clientX, y: clientY };
+    gardenRuntime.cameraStart = { ...gardenRuntime.camera };
+    els.gardenViewport.classList.add("dragging");
+  };
+
+  const moveDrag = (clientX, clientY) => {
+    if (!gardenRuntime.dragging) return;
+    const dx = clientX - gardenRuntime.pointerStart.x;
+    const dy = clientY - gardenRuntime.pointerStart.y;
+    gardenRuntime.camera.x = clamp(gardenRuntime.cameraStart.x + dx * 0.45, -48, 48);
+    gardenRuntime.camera.y = clamp(gardenRuntime.cameraStart.y + dy * 0.18, -20, 24);
+    applyCamera();
+  };
+
+  const endDrag = () => {
+    gardenRuntime.dragging = false;
+    els.gardenViewport.classList.remove("dragging");
+  };
+
+  els.gardenViewport.addEventListener("pointerdown", (event) => {
+    startDrag(event.clientX, event.clientY);
+  });
+
+  els.gardenViewport.addEventListener("pointermove", (event) => {
+    moveDrag(event.clientX, event.clientY);
+  });
+
+  window.addEventListener("pointerup", endDrag);
+  window.addEventListener("pointercancel", endDrag);
 }
 
 function switchTab(tab) {
@@ -222,116 +278,97 @@ function render() {
   els.gateCard.innerHTML = unlocked
     ? `
       <h4 class="gate-title">Garten freigeschaltet für heute ✅</h4>
-      <p class="gate-help">Shop und Tiere sind aktiv. Du kannst Objekte auswählen, im 3D Raum verschieben und mit Platzieren fixieren.</p>
+      <p class="gate-help">Dein Diorama ist offen: kaufe Belohnungen, ziehe die Kamera mit dem Finger und platziere neue Objekte im Bearbeiten-Modus.</p>
     `
     : `
       <h4 class="gate-title">Erreiche 30 g Ballaststoffe, um zu pflanzen.</h4>
       <p class="gate-help">Noch ${gramsLeft.toFixed(1)} g bis freigeschaltet.</p>
     `;
 
+  syncAnimalRuntime();
+  applyCamera();
   renderEditControls(unlocked);
   renderFoods();
   renderShop(unlocked);
   renderAnimals(unlocked);
-  renderGardenRoom();
+  renderGardenScene();
   renderPlacedItems();
 }
 
 function renderEditControls(unlocked) {
   els.editGardenBtn.textContent = editMode ? "Fertig" : "Bearbeiten";
   els.editToolbar.classList.toggle("hidden", !editMode);
-  els.placeItemBtn.disabled = !draftPlacement?.position;
+  els.placeItemBtn.disabled = !draftPlacement?.position || (draftPlacement?.type !== "animal" && !isPlacementValid(draftPlacement.position, draftPlacement.source === "existing" ? draftPlacement.id : null));
 
-  if (!editMode) {
-    return;
-  }
+  if (!editMode) return;
 
   if (!unlocked) {
-    els.editStatus.textContent = "Erreiche zuerst 30 g Ballaststoffe, damit du im Garten bearbeiten kannst.";
+    els.editStatus.textContent = "Erreiche zuerst 30 g Ballaststoffe, damit du den Garten bearbeiten kannst.";
     return;
   }
 
   if (draftPlacement?.source === "new") {
-    els.editStatus.textContent = `${draftPlacement.name} ausgewählt. Klicke auf ein futuristisches Feld und dann auf „Platzieren“.`;
+    els.editStatus.textContent = `${draftPlacement.name} ausgewählt. Ziehe den Garten, tippe auf einen Platz und bestätige dann mit „Platzieren“.`;
     return;
   }
 
   if (draftPlacement?.source === "existing") {
-    els.editStatus.textContent = `${draftPlacement.name} wird verschoben. Wähle ein neues Feld und bestätige mit „Platzieren“.`;
+    els.editStatus.textContent = `${draftPlacement.name} ist im Verschieben-Modus. Tippe auf eine neue Position und fixiere sie.`;
     return;
   }
 
-  els.editStatus.textContent = "Wähle im Shop ein Objekt oder tippe ein vorhandenes Objekt im Raum an, um es zu verschieben.";
+  els.editStatus.textContent = "Tippe ein vorhandenes Objekt an oder wähle etwas im Shop aus, um es in deinem Gartenraum zu platzieren.";
 }
 
 function renderFoods() {
-  const filteredFoods = foods.filter((food) => {
-    if (!searchTerm) return true;
-    return food.name.toLowerCase().includes(searchTerm);
-  });
-
-  els.foodSearchMeta.textContent = filteredFoods.length === foods.length
-    ? `${foods.length} Lebensmittel`
-    : `${filteredFoods.length} von ${foods.length} Lebensmitteln`;
+  const filteredFoods = foods.filter((food) => (!searchTerm ? true : food.name.toLowerCase().includes(searchTerm)));
+  els.foodSearchMeta.textContent = filteredFoods.length === foods.length ? `${foods.length} Lebensmittel` : `${filteredFoods.length} von ${foods.length} Lebensmitteln`;
 
   if (!filteredFoods.length) {
-    els.foodsList.innerHTML = `
-      <article class="card empty-card">
-        <h4>Keine Treffer</h4>
-        <p class="muted">Versuche einen anderen Suchbegriff.</p>
-      </article>
-    `;
+    els.foodsList.innerHTML = `<article class="card empty-card"><h4>Keine Treffer</h4><p class="muted">Versuche einen anderen Suchbegriff.</p></article>`;
     return;
   }
 
-  els.foodsList.innerHTML = filteredFoods
-    .map((food) => {
-      const defaultGrams = 100;
-      const estimatedFiber = calculateFiberForGrams(food.fiberGrams, defaultGrams);
-      const seedReward = Math.floor(estimatedFiber);
-
-      return `
-        <article class="food-item" aria-label="${food.name}">
-          <div class="food-top food-top-input">
-            <div class="food-copy">
-              <p class="food-title">${food.name}</p>
-              <p class="food-subline">${food.portionLabel} · ${food.fiberGrams.toFixed(1)} g Ballaststoffe · ca. +${seedReward} Seeds bei 100 g</p>
-            </div>
-            <form class="food-form" data-food-id="${food.id}">
-              <label class="sr-only" for="grams-${food.id}">${food.name} Gramm</label>
-              <div class="gram-field-wrap">
-                <input id="grams-${food.id}" class="gram-input" type="number" min="1" step="1" inputmode="numeric" value="100" aria-label="${food.name} Gramm" />
-                <span class="gram-suffix">g</span>
-              </div>
-              <button class="btn btn-primary" type="submit">Hinzufügen</button>
-            </form>
+  els.foodsList.innerHTML = filteredFoods.map((food) => {
+    const defaultGrams = 100;
+    const estimatedFiber = calculateFiberForGrams(food.fiberGrams, defaultGrams);
+    const seedReward = Math.floor(estimatedFiber);
+    return `
+      <article class="food-item" aria-label="${food.name}">
+        <div class="food-top food-top-input">
+          <div class="food-copy">
+            <p class="food-title">${food.name}</p>
+            <p class="food-subline">${food.portionLabel} · ${food.fiberGrams.toFixed(1)} g Ballaststoffe · ca. +${seedReward} Seeds bei 100 g</p>
           </div>
-        </article>
-      `;
-    })
-    .join("");
+          <form class="food-form" data-food-id="${food.id}">
+            <label class="sr-only" for="grams-${food.id}">${food.name} Gramm</label>
+            <div class="gram-field-wrap">
+              <input id="grams-${food.id}" class="gram-input" type="number" min="1" step="1" inputmode="numeric" value="100" aria-label="${food.name} Gramm" />
+              <span class="gram-suffix">g</span>
+            </div>
+            <button class="btn btn-primary" type="submit">Hinzufügen</button>
+          </form>
+        </div>
+      </article>
+    `;
+  }).join("");
 
   els.foodsList.querySelectorAll(".food-form").forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-
       const food = foods.find((entry) => entry.id === form.dataset.foodId);
       if (!food) return;
-
       const input = form.querySelector(".gram-input");
       const grams = Number.parseInt(input.value, 10);
       if (!Number.isFinite(grams) || grams <= 0) {
         input.focus();
         return;
       }
-
       const addedFiber = calculateFiberForGrams(food.fiberGrams, grams);
       const seedReward = Math.floor(addedFiber);
-
       state.dailyFiber += addedFiber;
       state.totalSeeds += seedReward;
       state.dailyFoodsLog[food.name] = (state.dailyFoodsLog[food.name] || 0) + grams;
-
       processGoalReachedIfNeeded();
       lightHaptic();
       persist();
@@ -341,42 +378,30 @@ function renderFoods() {
 }
 
 function renderShop(unlocked) {
-  els.shopList.innerHTML = shopItems
-    .map((item) => {
-      const disabled = !unlocked || state.totalSeeds < item.seedCost;
-      const activeDraft = draftPlacement?.source === "new" && draftPlacement.name === item.name;
-      return `
-        <article class="shop-item">
-          <div class="shop-top">
-            <div>
-              <p class="shop-title">${item.symbol} ${item.name}</p>
-              <p class="shop-subline">Kosten: ${item.seedCost} Seeds${activeDraft ? " · ausgewählt" : ""}</p>
-            </div>
-            <button class="btn btn-primary" data-shop-id="${item.id}" ${disabled ? "disabled" : ""}>${activeDraft ? "Ausgewählt" : "Auswählen"}</button>
+  els.shopList.innerHTML = shopItems.map((item) => {
+    const disabled = !unlocked || state.totalSeeds < item.seedCost;
+    const activeDraft = draftPlacement?.source === "new" && draftPlacement.name === item.name;
+    return `
+      <article class="shop-item">
+        <div class="shop-top">
+          <div>
+            <p class="shop-title">${item.symbol} ${item.name}</p>
+            <p class="shop-subline">Kosten: ${item.seedCost} Seeds${activeDraft ? " · bereit zum Platzieren" : ""}</p>
           </div>
-        </article>
-      `;
-    })
-    .join("");
+          <button class="btn btn-primary" data-shop-id="${item.id}" ${disabled ? "disabled" : ""}>${activeDraft ? "Ausgewählt" : "Wählen"}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
 
   els.shopList.querySelectorAll("[data-shop-id]").forEach((button) => {
     button.addEventListener("click", () => {
       const item = shopItems.find((entry) => entry.id === button.dataset.shopId);
       if (!item || state.totalSeeds < item.seedCost || state.dailyFiber < DAILY_GOAL) return;
-
       state.totalSeeds -= item.seedCost;
       editMode = true;
       selectedPlacedItemId = null;
-      draftPlacement = {
-        id: crypto.randomUUID(),
-        type: "decoration",
-        name: item.name,
-        symbolName: item.symbol,
-        datePlaced: new Date().toISOString(),
-        position: { x: 2, y: 2 },
-        source: "new"
-      };
-
+      draftPlacement = createDraftFromStoreItem(item, "new");
       persist();
       render();
     });
@@ -384,122 +409,92 @@ function renderShop(unlocked) {
 }
 
 function renderAnimals(unlocked) {
-  els.animalsList.innerHTML = animalItems
-    .map((item) => {
-      const disabled = !unlocked || state.totalEggs < item.eggCost;
-      const activeDraft = draftPlacement?.source === "new" && draftPlacement.name === item.name;
-      return `
-        <article class="shop-item">
-          <div class="shop-top">
-            <div>
-              <p class="shop-title">${item.symbol} ${item.name}</p>
-              <p class="shop-subline">Kosten: ${item.eggCost} Eier${activeDraft ? " · ausgewählt" : ""}</p>
-            </div>
-            <button class="btn btn-primary" data-animal-id="${item.id}" ${disabled ? "disabled" : ""}>${activeDraft ? "Ausgewählt" : "Auswählen"}</button>
+  els.animalsList.innerHTML = animalItems.map((item) => {
+    const disabled = !unlocked || state.totalEggs < item.eggCost;
+    const activeDraft = draftPlacement?.source === "new" && draftPlacement.name === item.name;
+    return `
+      <article class="shop-item">
+        <div class="shop-top">
+          <div>
+            <p class="shop-title">${item.symbol} ${item.name}</p>
+            <p class="shop-subline">Kosten: ${item.eggCost} Eier${activeDraft ? " · Spawn bereit" : ""}</p>
           </div>
-        </article>
-      `;
-    })
-    .join("");
+          <button class="btn btn-primary" data-animal-id="${item.id}" ${disabled ? "disabled" : ""}>${activeDraft ? "Ausgewählt" : "Wählen"}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
 
   els.animalsList.querySelectorAll("[data-animal-id]").forEach((button) => {
     button.addEventListener("click", () => {
       const item = animalItems.find((entry) => entry.id === button.dataset.animalId);
       if (!item || state.totalEggs < item.eggCost || state.dailyFiber < DAILY_GOAL) return;
-
       state.totalEggs -= item.eggCost;
       editMode = true;
       selectedPlacedItemId = null;
-      draftPlacement = {
-        id: crypto.randomUUID(),
-        type: "animal",
-        name: item.name,
-        symbolName: item.symbol,
-        datePlaced: new Date().toISOString(),
-        position: { x: 2, y: 2 },
-        source: "new"
-      };
-
+      draftPlacement = createDraftFromAnimalItem(item, "new");
       persist();
       render();
     });
   });
 }
 
-function renderGardenRoom() {
-  els.gardenFloor.classList.toggle("edit-mode", editMode);
+function renderGardenScene() {
+  els.gardenGrid.classList.toggle("visible", editMode);
+  renderGrid();
+  renderSceneObjects();
+}
 
-  const occupiedMap = new Map();
-  state.placedItems.forEach((item) => {
-    occupiedMap.set(`${item.position.x},${item.position.y}`, item.id);
-  });
-
-  const tiles = [];
-  for (let y = 0; y < GRID_SIZE; y += 1) {
-    for (let x = 0; x < GRID_SIZE; x += 1) {
-      const key = `${x},${y}`;
-      const occupiedId = occupiedMap.get(key);
-      const active = draftPlacement?.position?.x === x && draftPlacement?.position?.y === y;
-      tiles.push(`
-        <button
-          class="floor-tile ${editMode ? "editable" : ""} ${occupiedId ? "occupied" : ""} ${active ? "active" : ""}"
-          type="button"
-          data-x="${x}"
-          data-y="${y}"
-          ${editMode ? "" : "disabled"}
-          aria-label="Feld ${x + 1}, ${y + 1}"
-        ></button>
-      `);
+function renderGrid() {
+  const cells = [];
+  for (let row = 0; row < GRID_ROWS; row += 1) {
+    for (let col = 0; col < GRID_COLS; col += 1) {
+      const valid = !draftPlacement || draftPlacement.type === "animal" || isPlacementValid({ x: col, y: row }, draftPlacement?.source === "existing" ? draftPlacement.id : null);
+      const occupied = state.placedItems.some((item) => item.type !== "animal" && item.position.x === col && item.position.y === row);
+      const active = draftPlacement?.position?.x === col && draftPlacement?.position?.y === row;
+      cells.push(`<button class="garden-grid-cell ${active ? "active" : ""} ${occupied ? "occupied" : ""} ${editMode && !valid ? "invalid" : ""}" data-col="${col}" data-row="${row}" type="button"></button>`);
     }
   }
+  els.gardenGrid.innerHTML = cells.join("");
 
-  els.gardenFloor.innerHTML = `<div class="floor-grid">${tiles.join("")}</div>`;
+  if (!editMode) return;
 
-  els.gardenFloor.querySelectorAll(".floor-tile.editable").forEach((tile) => {
-    tile.addEventListener("click", () => {
-      if (!editMode || !draftPlacement) return;
-
-      const x = Number(tile.dataset.x);
-      const y = Number(tile.dataset.y);
-      if (!canPlaceAt(x, y, draftPlacement.source === "existing" ? draftPlacement.id : null)) {
-        return;
-      }
-
-      draftPlacement.position = { x, y };
+  els.gardenGrid.querySelectorAll(".garden-grid-cell").forEach((cell) => {
+    cell.addEventListener("click", () => {
+      if (!draftPlacement) return;
+      const col = Number(cell.dataset.col);
+      const row = Number(cell.dataset.row);
+      if (draftPlacement.type !== "animal" && !isPlacementValid({ x: col, y: row }, draftPlacement.source === "existing" ? draftPlacement.id : null)) return;
+      draftPlacement.position = { x: col, y: row };
       render();
     });
   });
+}
 
-  const itemsToRender = [...state.placedItems];
+function renderSceneObjects() {
+  const sceneItems = [];
+
+  state.placedItems.forEach((item) => {
+    if (item.type === "animal") {
+      sceneItems.push(renderAnimal(item));
+    } else {
+      sceneItems.push(renderStaticObject(item));
+    }
+  });
+
   if (draftPlacement) {
-    itemsToRender.push({ ...draftPlacement, draft: true });
+    sceneItems.push(renderDraftObject(draftPlacement));
   }
 
-  els.gardenObjects.innerHTML = itemsToRender.map((item) => {
-    const { left, bottom } = gridToScreenPosition(item.position.x, item.position.y);
-    const selected = draftPlacement?.id === item.id || selectedPlacedItemId === item.id;
-    return `
-      <button
-        type="button"
-        class="garden-object ${editMode ? "editable" : ""} ${selected ? "selected" : ""} ${item.draft ? "draft" : ""}"
-        style="left:${left}px; bottom:${bottom}px; transform: translateX(-50%);"
-        data-item-id="${item.id}"
-        aria-label="${item.name}"
-      >
-        <span class="garden-object-token">${item.symbolName}</span>
-        <span class="garden-object-label">${item.name}</span>
-      </button>
-    `;
-  }).join("");
+  sceneItems.sort((a, b) => a.depth - b.depth);
+  els.gardenObjects.innerHTML = sceneItems.map((entry) => entry.html).join("");
 
-  els.gardenObjects.querySelectorAll(".garden-object.editable").forEach((button) => {
+  els.gardenObjects.querySelectorAll(".garden-item[data-item-id]").forEach((button) => {
     button.addEventListener("click", () => {
       if (!editMode) return;
-
       const itemId = button.dataset.itemId;
       const existing = state.placedItems.find((entry) => entry.id === itemId);
-      if (!existing) return;
-
+      if (!existing || existing.type === "animal") return;
       selectedPlacedItemId = existing.id;
       draftPlacement = {
         ...existing,
@@ -511,122 +506,314 @@ function renderGardenRoom() {
   });
 }
 
+function renderStaticObject(item) {
+  const screen = gridToScreen(item.position.x, item.position.y);
+  const width = item.kind === "plant" ? 58 : 54;
+  const height = item.kind === "plant" ? 72 : 48;
+  const rareClass = item.rarity === "rare" ? "rare" : "";
+  const selected = draftPlacement?.id === item.id || selectedPlacedItemId === item.id ? "selected" : "";
+  return {
+    depth: item.position.y * 10 + 1,
+    html: `
+      <button class="garden-item ${item.kind} editable ${selected} ${rareClass}" data-item-id="${item.id}" style="left:${screen.x}px; bottom:${screen.y}px;">
+        <span class="garden-item-shadow"></span>
+        <span class="garden-item-body" style="width:${width}px; height:${height}px; transform: rotate(${item.rotation || 0}deg);">
+          <span class="garden-item-sprite">${item.symbolName}</span>
+        </span>
+        <span class="garden-item-label">${item.name}</span>
+      </button>
+    `
+  };
+}
+
+function renderAnimal(item) {
+  const runtime = ensureAnimalRuntime(item);
+  const screen = gridToScreenFloat(runtime.x, runtime.y);
+  return {
+    depth: runtime.y * 10 + 2,
+    html: `
+      <div class="garden-item animal" data-animal-id="${item.id}" style="left:${screen.x}px; bottom:${screen.y}px;">
+        <span class="garden-item-shadow"></span>
+        <span class="garden-item-body" style="width:54px; height:54px; transform: scaleX(${runtime.facing});">
+          <span class="garden-item-sprite">${item.symbolName}</span>
+        </span>
+        <span class="garden-item-label">${item.name}</span>
+      </div>
+    `
+  };
+}
+
+function renderDraftObject(item) {
+  const valid = item.type === "animal" ? true : isPlacementValid(item.position, item.source === "existing" ? item.id : null);
+  const screen = gridToScreen(item.position.x, item.position.y);
+  return {
+    depth: item.position.y * 10 + 3,
+    html: `
+      <div class="garden-item ${item.kind || item.type} preview ${valid ? "valid" : "invalid"}" style="left:${screen.x}px; bottom:${screen.y}px;">
+        <span class="garden-item-shadow"></span>
+        <span class="garden-item-body" style="width:${item.type === "animal" ? 54 : 58}px; height:${item.type === "animal" ? 54 : 72}px; transform: rotate(${item.rotation || 0}deg);">
+          <span class="garden-item-sprite">${item.symbolName}</span>
+        </span>
+        <span class="garden-item-label">${item.name}</span>
+      </div>
+    `
+  };
+}
+
 function renderPlacedItems() {
   if (!state.placedItems.length) {
-    els.placedList.innerHTML = `
-      <article class="card empty-card">
-        <h4>Dein Garten ist leer</h4>
-        <p class="muted">Öffne den Bearbeiten-Modus, wähle ein Shop-Objekt und platziere es auf dem Rasenraum 🌱</p>
-      </article>
-    `;
+    els.placedList.innerHTML = `<article class="card empty-card"><h4>Dein Garten ist leer</h4><p class="muted">Kaufe Pflanzen oder Tiere und erschaffe dir einen kleinen lebendigen Reward-Raum.</p></article>`;
     return;
   }
 
-  els.placedList.innerHTML = state.placedItems
-    .map((item) => {
-      const typeLabel = item.type === "animal" ? "Tier" : "Dekoration";
-      const datePlaced = new Date(item.datePlaced).toLocaleDateString("de-DE", { dateStyle: "medium" });
-      return `
-        <article class="placed-item">
-          <div class="placed-top">
-            <div>
-              <p class="placed-title">${item.symbolName} ${item.name}</p>
-              <p class="placed-subline">${typeLabel} · Feld ${item.position.x + 1}/${item.position.y + 1}</p>
-            </div>
-            <p class="placed-subline">${datePlaced}</p>
+  els.placedList.innerHTML = state.placedItems.map((item) => {
+    const typeLabel = item.type === "animal" ? "Tier" : item.kind === "plant" ? "Pflanze" : "Dekoration";
+    const datePlaced = new Date(item.datePlaced).toLocaleDateString("de-DE", { dateStyle: "medium" });
+    return `
+      <article class="placed-item">
+        <div class="placed-top">
+          <div>
+            <p class="placed-title">${item.symbolName} ${item.name}</p>
+            <p class="placed-subline">${typeLabel} · Zone ${item.position.x + 1}/${item.position.y + 1}</p>
           </div>
-        </article>
-      `;
-    })
-    .join("");
+          <p class="placed-subline">${datePlaced}</p>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function createDraftFromStoreItem(item, source) {
+  return {
+    id: crypto.randomUUID(),
+    type: "decoration",
+    kind: SHOP_ITEM_KIND[item.name] || "decoration",
+    name: item.name,
+    symbolName: item.symbol,
+    datePlaced: new Date().toISOString(),
+    position: findFirstOpenGridCell(),
+    rotation: randomBetween(-8, 8),
+    rarity: item.name === "Kirschbaum" ? "rare" : "common",
+    source
+  };
+}
+
+function createDraftFromAnimalItem(item, source) {
+  return {
+    id: crypto.randomUUID(),
+    type: "animal",
+    kind: "animal",
+    name: item.name,
+    symbolName: item.symbol,
+    datePlaced: new Date().toISOString(),
+    position: findAnimalSpawnCell(),
+    rotation: 0,
+    rarity: item.name === "Katze" ? "rare" : "common",
+    source
+  };
+}
+
+function findFirstOpenGridCell() {
+  for (let row = 0; row < GRID_ROWS; row += 1) {
+    for (let col = 0; col < GRID_COLS; col += 1) {
+      if (isPlacementValid({ x: col, y: row })) return { x: col, y: row };
+    }
+  }
+  return { x: 0, y: 0 };
+}
+
+function findAnimalSpawnCell() {
+  return { x: 2, y: 1 };
+}
+
+function isPlacementValid(position, ignoreItemId = null) {
+  return !state.placedItems.some((item) => item.id !== ignoreItemId && item.type !== "animal" && item.position.x === position.x && item.position.y === position.y);
+}
+
+function commitPlacement() {
+  if (!draftPlacement?.position) return;
+  if (draftPlacement.type !== "animal" && !isPlacementValid(draftPlacement.position, draftPlacement.source === "existing" ? draftPlacement.id : null)) return;
+
+  if (draftPlacement.source === "existing") {
+    state.placedItems = state.placedItems.map((item) => item.id === draftPlacement.id ? { ...item, position: { ...draftPlacement.position }, rotation: draftPlacement.rotation } : item);
+  } else {
+    const placed = {
+      id: draftPlacement.id,
+      type: draftPlacement.type,
+      kind: draftPlacement.kind,
+      name: draftPlacement.name,
+      symbolName: draftPlacement.symbolName,
+      datePlaced: draftPlacement.datePlaced,
+      position: { ...draftPlacement.position },
+      rotation: draftPlacement.rotation,
+      rarity: draftPlacement.rarity
+    };
+    state.placedItems.push(placed);
+  }
+
+  draftPlacement = null;
+  selectedPlacedItemId = null;
+  persist();
+  syncAnimalRuntime();
+  successHaptic();
+  render();
+}
+
+function syncAnimalRuntime() {
+  const animalIds = new Set();
+  state.placedItems.filter((item) => item.type === "animal").forEach((animal) => {
+    animalIds.add(animal.id);
+    ensureAnimalRuntime(animal);
+  });
+  [...gardenRuntime.animalMotion.keys()].forEach((id) => {
+    if (!animalIds.has(id)) gardenRuntime.animalMotion.delete(id);
+  });
+}
+
+function ensureAnimalRuntime(animal) {
+  let runtime = gardenRuntime.animalMotion.get(animal.id);
+  if (!runtime) {
+    runtime = {
+      x: animal.position.x + 0.5,
+      y: animal.position.y + 0.5,
+      targetX: animal.position.x + 0.5,
+      targetY: animal.position.y + 0.5,
+      wait: randomBetween(0.4, 1.6),
+      speed: randomBetween(0.18, 0.36),
+      facing: 1
+    };
+    gardenRuntime.animalMotion.set(animal.id, runtime);
+  }
+  return runtime;
+}
+
+function startAnimalLoop() {
+  if (gardenRuntime.loopId) return;
+  const frame = (timestamp) => {
+    if (!gardenRuntime.lastFrame) gardenRuntime.lastFrame = timestamp;
+    const delta = Math.min(0.032, (timestamp - gardenRuntime.lastFrame) / 1000);
+    gardenRuntime.lastFrame = timestamp;
+    stepAnimals(delta);
+    updateAnimalDomPositions();
+    gardenRuntime.loopId = requestAnimationFrame(frame);
+  };
+  gardenRuntime.loopId = requestAnimationFrame(frame);
+}
+
+function stepAnimals(delta) {
+  state.placedItems.filter((item) => item.type === "animal").forEach((animal) => {
+    const runtime = ensureAnimalRuntime(animal);
+    runtime.wait -= delta;
+
+    if (runtime.wait <= 0 && distance(runtime.x, runtime.y, runtime.targetX, runtime.targetY) < 0.05) {
+      const target = chooseAnimalTarget(animal, runtime);
+      runtime.targetX = target.x;
+      runtime.targetY = target.y;
+      runtime.wait = randomBetween(0.8, 2.2);
+    }
+
+    const angle = Math.atan2(runtime.targetY - runtime.y, runtime.targetX - runtime.x);
+    const move = runtime.speed * delta;
+    const remaining = distance(runtime.x, runtime.y, runtime.targetX, runtime.targetY);
+    if (remaining > 0.02) {
+      runtime.x += Math.cos(angle) * Math.min(move, remaining);
+      runtime.y += Math.sin(angle) * Math.min(move, remaining);
+      runtime.facing = runtime.targetX >= runtime.x ? 1 : -1;
+    }
+  });
+}
+
+function chooseAnimalTarget(animal, runtime) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const offsetX = randomBetween(-1.1, 1.1);
+    const offsetY = randomBetween(-0.8, 0.8);
+    const x = clamp(animal.position.x + 0.5 + offsetX, 0.4, GRID_COLS - 0.4);
+    const y = clamp(animal.position.y + 0.5 + offsetY, 0.4, GRID_ROWS - 0.2);
+    if (isAnimalTargetClear(animal.id, x, y)) return { x, y };
+  }
+  return { x: runtime.x, y: runtime.y };
+}
+
+function isAnimalTargetClear(animalId, x, y) {
+  const plants = state.placedItems.filter((item) => item.type !== "animal");
+  const nearPlant = plants.some((item) => distance(x, y, item.position.x + 0.5, item.position.y + 0.5) < 0.42);
+  if (nearPlant) return false;
+
+  return !state.placedItems.filter((item) => item.type === "animal" && item.id !== animalId).some((item) => {
+    const runtime = gardenRuntime.animalMotion.get(item.id);
+    if (!runtime) return false;
+    return distance(x, y, runtime.x, runtime.y) < 0.48;
+  });
+}
+
+function updateAnimalDomPositions() {
+  els.gardenObjects.querySelectorAll("[data-animal-id]").forEach((node) => {
+    const runtime = gardenRuntime.animalMotion.get(node.dataset.animalId);
+    if (!runtime) return;
+    const screen = gridToScreenFloat(runtime.x, runtime.y);
+    node.style.left = `${screen.x}px`;
+    node.style.bottom = `${screen.y}px`;
+    const body = node.querySelector(".garden-item-body");
+    if (body) body.style.transform = `scaleX(${runtime.facing})`;
+  });
+}
+
+function normalizePlacedItem(item, index) {
+  const fallback = {
+    x: index % GRID_COLS,
+    y: Math.floor(index / GRID_COLS) % GRID_ROWS
+  };
+  return {
+    ...item,
+    id: item.id ?? crypto.randomUUID(),
+    kind: item.kind ?? (item.type === "animal" ? "animal" : SHOP_ITEM_KIND[item.name] || "decoration"),
+    position: item.position && Number.isFinite(item.position.x) && Number.isFinite(item.position.y) ? item.position : fallback,
+    rotation: Number.isFinite(item.rotation) ? item.rotation : randomBetween(-8, 8),
+    rarity: item.rarity ?? (item.name === "Kirschbaum" || item.name === "Katze" ? "rare" : "common")
+  };
+}
+
+function gridToScreen(col, row) {
+  const x = SCENE_CENTER_X + (col - row) * GRID_STEP_X;
+  const y = ISLAND_CENTER_Y + (col + row) * GRID_STEP_Y;
+  return { x, y };
+}
+
+function gridToScreenFloat(x, y) {
+  const screenX = SCENE_CENTER_X + (x - y) * GRID_STEP_X;
+  const screenY = ISLAND_CENTER_Y + (x + y) * GRID_STEP_Y;
+  return { x: screenX, y: screenY };
+}
+
+function applyCamera() {
+  els.gardenScene.style.setProperty("--camera-x", `${gardenRuntime.camera.x}px`);
+  els.gardenScene.style.setProperty("--camera-y", `${gardenRuntime.camera.y}px`);
 }
 
 function calculateFiberForGrams(fiberPer100Grams, grams) {
   return (fiberPer100Grams * grams) / 100;
 }
 
-function canPlaceAt(x, y, ignoreItemId = null) {
-  return !state.placedItems.some((item) => item.id !== ignoreItemId && item.position.x === x && item.position.y === y);
-}
-
-function commitPlacement() {
-  if (!draftPlacement?.position) return;
-
-  if (draftPlacement.source === "existing") {
-    state.placedItems = state.placedItems.map((item) => item.id === draftPlacement.id
-      ? { ...item, position: { ...draftPlacement.position } }
-      : item);
-  } else {
-    state.placedItems.push({
-      id: draftPlacement.id,
-      type: draftPlacement.type,
-      name: draftPlacement.name,
-      symbolName: draftPlacement.symbolName,
-      datePlaced: draftPlacement.datePlaced,
-      position: { ...draftPlacement.position }
-    });
-  }
-
-  draftPlacement = null;
-  selectedPlacedItemId = null;
-  persist();
-  successHaptic();
-  render();
-}
-
-function normalizePlacedItem(item, index) {
-  const fallback = defaultGridPosition(index);
-  return {
-    ...item,
-    id: item.id ?? crypto.randomUUID(),
-    position: item.position && Number.isFinite(item.position.x) && Number.isFinite(item.position.y)
-      ? item.position
-      : fallback
-  };
-}
-
-function defaultGridPosition(index) {
-  return {
-    x: index % GRID_SIZE,
-    y: Math.floor(index / GRID_SIZE) % GRID_SIZE
-  };
-}
-
-function gridToScreenPosition(x, y) {
-  const step = TILE_SIZE + TILE_GAP;
-  const left = ((420 - FLOOR_SIZE) / 2) + (x * step) + TILE_SIZE / 2;
-  const bottom = FLOOR_BOTTOM_OFFSET + (y * 8) + ((GRID_SIZE - y - 1) * 4);
-  return { left, bottom };
-}
-
 function processGoalReachedIfNeeded(now = new Date()) {
   if (state.dailyFiber < DAILY_GOAL) return;
-
   const today = dateString(now);
   if (state.lastGoalDateString === today) return;
-
   if (state.lastGoalDateString && isYesterday(state.lastGoalDateString, now)) {
     state.streakCount += 1;
   } else {
     state.streakCount = 1;
   }
-
   state.lastGoalDateString = today;
-
-  if (state.streakCount % 7 === 0) {
-    state.totalEggs += 1;
-  }
+  if (state.streakCount % 7 === 0) state.totalEggs += 1;
 }
 
 function checkDateRollover(now = new Date()) {
   const today = dateString(now);
-
   if (!state.lastDateString) {
     state.lastDateString = today;
     persist();
     return;
   }
-
   if (today !== state.lastDateString) {
     state.dailyFiber = 0;
     state.dailyFoodsLog = {};
@@ -638,14 +825,10 @@ function checkDateRollover(now = new Date()) {
 
 function validateStreakAcrossMissedDays(referenceDate = new Date()) {
   if (!state.lastGoalDateString) return;
-
   const lastGoal = parseDate(state.lastGoalDateString);
   const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
   const dayDiff = Math.floor((today - lastGoal) / 86400000);
-
-  if (dayDiff > 1) {
-    state.streakCount = 0;
-  }
+  if (dayDiff > 1) state.streakCount = 0;
 }
 
 function isYesterday(lastGoalDateString, now = new Date()) {
@@ -674,6 +857,18 @@ function loadState() {
 
 function persist() {
   localStorage.setItem("fiberGardenState", JSON.stringify(state));
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function randomBetween(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function distance(x1, y1, x2, y2) {
+  return Math.hypot(x2 - x1, y2 - y1);
 }
 
 function lightHaptic() {
