@@ -283,16 +283,16 @@ body {
 .garden-diorama {
   padding: 12px;
   overflow: hidden;
-  background: linear-gradient(180deg, #fbfdff 0%, #f4f7fb 100%);
+  background: linear-gradient(180deg, #fcf7ef 0%, #f4eee3 100%);
 }
 .garden-viewport {
   position: relative;
   height: 380px;
   border-radius: 28px;
   overflow: hidden;
-  background: linear-gradient(180deg, #dff2ff 0%, #edf8ff 44%, #f8fcff 100%);
+  background: linear-gradient(180deg, #cbe2ff 0%, #e8f2ff 34%, #fbf7ef 100%);
   border: 1px solid rgba(255,255,255,0.45);
-  box-shadow: inset 0 -30px 40px rgba(29, 56, 72, 0.05);
+  box-shadow: inset 0 -30px 40px rgba(97, 73, 33, 0.06);
   touch-action: none;
   user-select: none;
 }
@@ -408,13 +408,13 @@ body {
   transform: translateX(-50%) rotateX(63deg) rotateZ(-8deg);
   border-radius: 42% 58% 48% 52% / 52% 44% 56% 48%;
   background:
-    radial-gradient(circle at 20% 24%, rgba(154, 241, 171, 0.9), rgba(154, 241, 171, 0) 24%),
+    radial-gradient(circle at 20% 24%, rgba(164, 229, 144, 0.82), rgba(154, 241, 171, 0) 24%),
     radial-gradient(circle at 68% 56%, rgba(255,255,255,0.18), rgba(255,255,255,0) 32%),
-    linear-gradient(180deg, #78dd85, #44bd68 60%, #2d9751 100%);
+    linear-gradient(180deg, #a6d273, #8cbc61 58%, #6e9b48 100%);
   box-shadow:
     inset 0 8px 22px rgba(255,255,255,0.24),
-    inset 0 -22px 28px rgba(20, 71, 35, 0.24),
-    0 24px 32px rgba(22, 42, 28, 0.18);
+    inset 0 -22px 28px rgba(88, 90, 33, 0.24),
+    0 24px 32px rgba(63, 50, 22, 0.18);
 }
 .garden-path {
   width: 120px;
@@ -464,6 +464,73 @@ body {
 .grass-clump,
 .garden-foreground,
 .garden-empty-overlay { position: absolute; }
+
+.pen-fence,
+.mini-barn,
+.hay-bale { position: absolute; }
+.pen-fence {
+  background: repeating-linear-gradient(90deg, #8a6439 0 10px, #cfa36f 10px 14px);
+  border-radius: 10px;
+  box-shadow: inset 0 -2px 0 rgba(72, 48, 22, 0.18);
+}
+.fence-back {
+  left: 82px;
+  bottom: 168px;
+  width: 194px;
+  height: 10px;
+  transform: rotateX(63deg) rotateZ(-8deg);
+}
+.fence-front {
+  left: 100px;
+  bottom: 78px;
+  width: 170px;
+  height: 10px;
+  transform: rotateX(63deg) rotateZ(-8deg);
+}
+.fence-left {
+  left: 86px;
+  bottom: 112px;
+  width: 12px;
+  height: 102px;
+  transform: skewY(38deg);
+}
+.fence-right {
+  right: 88px;
+  bottom: 104px;
+  width: 12px;
+  height: 112px;
+  transform: skewY(-38deg);
+}
+.mini-barn {
+  width: 52px;
+  height: 44px;
+  border-radius: 8px 8px 12px 12px;
+  background: linear-gradient(180deg, #d2bf87, #b89a62);
+  box-shadow: 0 10px 18px rgba(97, 69, 31, 0.18);
+}
+.mini-barn::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  right: -4px;
+  top: -12px;
+  height: 18px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #d87054, #b34b3d);
+  transform: skewX(-24deg);
+}
+.barn-left { left: 88px; bottom: 126px; transform: scale(0.95); }
+.barn-right { right: 84px; bottom: 122px; transform: scale(0.9); }
+.hay-bale {
+  width: 26px;
+  height: 18px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #f4de82, #d6b24e);
+  box-shadow: inset 0 -3px 4px rgba(119, 86, 21, 0.16);
+}
+.hay-a { left: 142px; bottom: 116px; transform: rotate(-6deg); }
+.hay-b { right: 136px; bottom: 98px; transform: rotate(8deg); }
+
 
 .room-back-wall,
 .room-side-wall,
@@ -671,11 +738,11 @@ body {
 }
 .garden-item.plant .garden-item-body,
 .garden-item.decoration .garden-item-body {
-  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(229,241,230,0.96));
+  background: linear-gradient(180deg, rgba(255,248,230,0.96), rgba(223, 235, 207, 0.98));
   border: 1px solid rgba(255,255,255,0.7);
 }
 .garden-item.animal .garden-item-body {
-  background: linear-gradient(180deg, rgba(255,248,236,0.95), rgba(253,229,199,0.98));
+  background: linear-gradient(180deg, rgba(255,244,221,0.98), rgba(243, 220, 171, 0.98));
   border: 1px solid rgba(255,255,255,0.72);
 }
 .garden-item.editable { cursor: pointer; }
