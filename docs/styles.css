@@ -288,9 +288,11 @@ body {
 .garden-viewport {
   position: relative;
   height: 380px;
-  border-radius: 24px;
+  border-radius: 28px;
   overflow: hidden;
   background: linear-gradient(180deg, #dff2ff 0%, #edf8ff 44%, #f8fcff 100%);
+  border: 1px solid rgba(255,255,255,0.45);
+  box-shadow: inset 0 -30px 40px rgba(29, 56, 72, 0.05);
   touch-action: none;
   user-select: none;
 }
@@ -305,6 +307,9 @@ body {
 .sun-glow,
 .cloud,
 .far-hills,
+.room-back-wall,
+.room-side-wall,
+.room-floor-rim,
 .garden-island-shadow,
 .garden-island,
 .garden-path,
@@ -458,8 +463,71 @@ body {
 .garden-rock,
 .grass-clump,
 .garden-foreground,
-.garden-room-caption,
 .garden-empty-overlay { position: absolute; }
+
+.room-back-wall,
+.room-side-wall,
+.room-floor-rim,
+.room-corner,
+.garden-scene-hint { position: absolute; }
+.room-back-wall {
+  left: 50%;
+  top: 82px;
+  width: 286px;
+  height: 118px;
+  transform: translateX(-50%);
+  border-radius: 28px 28px 18px 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(232, 239, 228, 0.92));
+  box-shadow: inset 0 -18px 24px rgba(84, 126, 94, 0.12);
+}
+.room-side-wall {
+  top: 126px;
+  width: 96px;
+  height: 156px;
+  background: linear-gradient(180deg, rgba(247,250,253,0.96), rgba(228,236,226,0.96));
+}
+.room-left-wall {
+  left: 16px;
+  transform: skewY(22deg);
+  border-radius: 24px 0 18px 18px;
+}
+.room-right-wall {
+  right: 16px;
+  transform: skewY(-22deg);
+  border-radius: 0 24px 18px 18px;
+}
+.room-floor-rim {
+  width: 302px;
+  height: 184px;
+  left: 50%;
+  bottom: 46px;
+  transform: translateX(-50%) rotateX(63deg) rotateZ(-8deg);
+  border-radius: 44% 56% 48% 52% / 52% 44% 56% 48%;
+  background: linear-gradient(180deg, rgba(182,125,84,0.78), rgba(129,89,60,0.8));
+  box-shadow: 0 18px 28px rgba(58, 34, 16, 0.15);
+}
+.room-corner {
+  width: 24px;
+  height: 48px;
+  bottom: 96px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, rgba(241, 222, 188, 0.95), rgba(191, 152, 113, 0.96));
+  box-shadow: 0 10px 12px rgba(74, 56, 34, 0.1);
+}
+.room-corner-left { left: 78px; transform: rotate(-8deg); }
+.room-corner-right { right: 78px; transform: rotate(8deg); }
+.garden-scene-hint {
+  right: 14px;
+  top: 14px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.62);
+  backdrop-filter: blur(8px);
+  color: #5c6c7e;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
 .garden-rock {
   width: 26px;
   height: 18px;
@@ -491,39 +559,6 @@ body {
     radial-gradient(68px 24px at 78% 38%, rgba(56, 155, 88, 0.62), transparent 70%);
   filter: blur(6px);
   opacity: 0.8;
-}
-.garden-room-caption {
-  left: 18px;
-  top: 16px;
-  max-width: 210px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.48);
-  box-shadow: 0 8px 22px rgba(30, 55, 82, 0.08);
-}
-.garden-room-caption h3 {
-  margin: 4px 0 0;
-  font-size: 1rem;
-  line-height: 1.08;
-}
-.garden-room-caption p {
-  margin: 7px 0 0;
-  font-size: 0.78rem;
-  color: var(--muted);
-  line-height: 1.35;
-}
-.caption-kicker {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(119, 226, 155, 0.3);
-  color: #1a7a3f;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 .garden-empty-overlay {
   left: 50%;
@@ -632,16 +667,7 @@ body {
   filter: blur(6px);
 }
 .garden-item-label {
-  position: absolute;
-  left: 50%;
-  bottom: -18px;
-  transform: translateX(-50%);
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(16, 22, 32, 0.54);
-  color: white;
-  font-size: 0.7rem;
-  white-space: nowrap;
+  display: none;
 }
 .garden-item.plant .garden-item-body,
 .garden-item.decoration .garden-item-body {
