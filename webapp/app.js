@@ -1,376 +1,316 @@
-const catalog = {
-  plants: [
-    { id: 'olive', name: 'Olivenbaum', currency: 'seeds', cost: 45, type: 'plant', className: 'sprite-olive' },
-    { id: 'bamboo', name: 'Bambus', currency: 'seeds', cost: 28, type: 'plant', className: 'sprite-bamboo' },
-    { id: 'rose', name: 'Rose', currency: 'seeds', cost: 16, type: 'plant', className: 'sprite-rose' }
-  ],
-  animals: [
-    { id: 'cat', name: 'Katze', currency: 'eggs', cost: 2, type: 'animal', className: 'sprite-cat', speed: 0.17 },
-    { id: 'deer', name: 'Hirsch', currency: 'eggs', cost: 4, type: 'animal', className: 'sprite-deer', speed: 0.12 },
-    { id: 'dog', name: 'Hund', currency: 'eggs', cost: 3, type: 'animal', className: 'sprite-dog', speed: 0.19 }
-  ]
-};
+const DAILY_GOAL = 30;
+
+const foods = [
+  { id: crypto.randomUUID(), name: "Haferflocken", portionLabel: "50 g", fiberGrams: 5.0, seedReward: 2 },
+  { id: crypto.randomUUID(), name: "Apfel", portionLabel: "1 Stück", fiberGrams: 4.4, seedReward: 2 },
+  { id: crypto.randomUUID(), name: "Linsen", portionLabel: "150 g gekocht", fiberGrams: 11.0, seedReward: 6 },
+  { id: crypto.randomUUID(), name: "Kichererbsen", portionLabel: "150 g gekocht", fiberGrams: 9.0, seedReward: 5 },
+  { id: crypto.randomUUID(), name: "Vollkornbrot", portionLabel: "2 Scheiben", fiberGrams: 6.5, seedReward: 4 },
+  { id: crypto.randomUUID(), name: "Chiasamen", portionLabel: "20 g", fiberGrams: 6.8, seedReward: 5 },
+  { id: crypto.randomUUID(), name: "Brokkoli", portionLabel: "200 g", fiberGrams: 6.0, seedReward: 3 },
+  { id: crypto.randomUUID(), name: "Himbeeren", portionLabel: "125 g", fiberGrams: 8.0, seedReward: 5 }
+];
+
+const shopItems = [
+  { id: crypto.randomUUID(), name: "Kirschbaum", seedCost: 50, symbol: "🌳" },
+  { id: crypto.randomUUID(), name: "Blumenbeet", seedCost: 20, symbol: "🌼" },
+  { id: crypto.randomUUID(), name: "Steinpfad", seedCost: 35, symbol: "🧱" }
+];
+
+const animalItems = [
+  { id: crypto.randomUUID(), name: "Ameise", eggCost: 1, symbol: "🐜" },
+  { id: crypto.randomUUID(), name: "Katze", eggCost: 4, symbol: "🐱" }
+];
 
 const defaultState = {
-  seeds: 150,
-  eggs: 8,
-  editMode: false,
-  placementSelection: null,
-  selectedItemId: null,
-  items: [
-    createPlacedItem(catalog.plants[0], 66, 44),
-    createPlacedItem(catalog.plants[2], 52, 63),
-    createPlacedItem(catalog.plants[1], 76, 52),
-    createPlacedItem(catalog.animals[0], 60, 71),
-    createPlacedItem(catalog.animals[2], 79, 76)
-  ]
+  totalSeeds: 0,
+  totalEggs: 0,
+  placedItems: [],
+  dailyFiber: 0,
+  dailyFoodsLog: {},
+  lastDateString: "",
+  streakCount: 0,
+  lastGoalDateString: null
 };
 
 let state = loadState();
-let dragState = null;
-let animationFrame = null;
-let lastAnimationTime = performance.now();
+checkDateRollover();
+validateStreakAcrossMissedDays();
 
 const els = {
-  seedCount: document.getElementById('seed-count'),
-  eggCount: document.getElementById('egg-count'),
-  plantsShop: document.getElementById('plants-shop'),
-  animalsShop: document.getElementById('animals-shop'),
-  gardenScene: document.getElementById('garden-scene'),
-  statusBanner: document.getElementById('status-banner'),
-  editToggle: document.getElementById('edit-toggle'),
-  clearGarden: document.getElementById('clear-garden'),
-  selectedMode: document.getElementById('selected-mode'),
-  selectionDetails: document.getElementById('selection-details'),
-  shopItemTemplate: document.getElementById('shop-item-template')
+  trackerTab: document.getElementById("tracker-tab"),
+  gardenTab: document.getElementById("garden-tab"),
+  tabButtons: [...document.querySelectorAll(".tab-button")],
+  dailyFiberDisplay: document.getElementById("daily-fiber-display"),
+  dailyProgressBar: document.getElementById("daily-progress-bar"),
+  streakDays: document.getElementById("streak-days"),
+  streakProgressBar: document.getElementById("streak-progress-bar"),
+  eggDisplay: document.getElementById("egg-display"),
+  seedDisplay: document.getElementById("seed-display"),
+  seedPill: document.getElementById("seed-pill"),
+  eggPill: document.getElementById("egg-pill"),
+  gateCard: document.getElementById("gate-card"),
+  foodsList: document.getElementById("foods-list"),
+  shopList: document.getElementById("shop-list"),
+  animalsList: document.getElementById("animals-list"),
+  placedList: document.getElementById("placed-list"),
+  resetDayBtn: document.getElementById("reset-day-btn"),
+  clearGardenBtn: document.getElementById("clear-garden-btn")
 };
 
 bindEvents();
 render();
-startAnimation();
 
 function bindEvents() {
-  els.editToggle.addEventListener('click', () => {
-    state.editMode = !state.editMode;
-    if (!state.editMode) state.selectedItemId = null;
-    announce(state.editMode ? 'Edit-Modus aktiv: Elemente anklicken und verschieben.' : 'Edit-Modus deaktiviert.');
+  els.tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+  });
+
+  els.resetDayBtn.addEventListener("click", () => {
+    state.dailyFiber = 0;
+    state.dailyFoodsLog = {};
     persist();
     render();
   });
 
-  els.clearGarden.addEventListener('click', () => {
-    state.items = [];
-    state.selectedItemId = null;
-    announce('Der Garten wurde geleert.');
-    persist();
-    render();
-  });
-
-  els.gardenScene.addEventListener('click', (event) => {
-    if (!state.placementSelection) return;
-    if (event.target.closest('.placed-item')) return;
-
-    const position = getRelativePosition(event);
-    const item = getCatalogItem(state.placementSelection);
-    if (!item) return;
-
-    placeItem(item, position.x, position.y);
-  });
-
-  window.addEventListener('pointermove', onPointerMove);
-  window.addEventListener('pointerup', stopDragging);
-  window.addEventListener('pointercancel', stopDragging);
-}
-
-function render() {
-  els.seedCount.textContent = state.seeds;
-  els.eggCount.textContent = state.eggs;
-  els.editToggle.textContent = `Edit: ${state.editMode ? 'An' : 'Aus'}`;
-  els.selectedMode.textContent = state.editMode ? 'Edit aktiv' : 'Kein Objekt';
-
-  renderShop('plants', els.plantsShop);
-  renderShop('animals', els.animalsShop);
-  renderGarden();
-  renderInspector();
-  updateBanner();
-}
-
-function renderShop(section, mount) {
-  mount.innerHTML = '';
-  for (const item of catalog[section]) {
-    const node = els.shopItemTemplate.content.firstElementChild.cloneNode(true);
-    const affordable = state[item.currency] >= item.cost;
-    const active = state.placementSelection === item.id;
-
-    node.querySelector('.shop-art').appendChild(createSprite(item, true));
-    node.querySelector('.shop-name').textContent = item.name;
-    node.querySelector('.shop-price').textContent = `Kosten: ${item.cost} ${item.currency === 'seeds' ? 'Seeds' : 'Eggs'}`;
-    node.classList.toggle('active', active);
-    node.disabled = !affordable;
-
-    node.addEventListener('click', () => {
-      if (!affordable) return;
-      state.placementSelection = active ? null : item.id;
-      state.selectedItemId = null;
-      announce(state.placementSelection ? `${item.name} ausgewählt. Klicke in den Garten zum Platzieren.` : 'Auswahl aufgehoben.');
-      persist();
-      render();
-    });
-
-    mount.appendChild(node);
-  }
-}
-
-function renderGarden() {
-  els.gardenScene.querySelectorAll('.placed-item').forEach((node) => node.remove());
-
-  const sorted = [...state.items].sort((a, b) => a.y - b.y);
-  for (const item of sorted) {
-    const node = document.createElement('button');
-    node.type = 'button';
-    node.className = 'placed-item';
-    if (state.selectedItemId === item.id) node.classList.add('selected');
-    if (state.editMode) node.classList.add('editing');
-    node.style.left = `${item.x}%`;
-    node.style.top = `${item.y}%`;
-    node.style.zIndex = String(100 + Math.round(item.y));
-    node.dataset.id = item.id;
-    node.appendChild(createSprite(item, false));
-
-    node.addEventListener('click', (event) => {
-      event.stopPropagation();
-      if (state.editMode) {
-        state.selectedItemId = item.id;
-        persist();
-        renderInspector();
-        renderGarden();
-        return;
-      }
-      announce(`${item.name} steht im Garten.`);
-    });
-
-    node.addEventListener('pointerdown', (event) => {
-      if (!state.editMode) return;
-      dragState = { id: item.id, pointerId: event.pointerId };
-      node.classList.add('dragging');
-      node.setPointerCapture?.(event.pointerId);
-      event.preventDefault();
-    });
-
-    els.gardenScene.appendChild(node);
-  }
-}
-
-function renderInspector() {
-  const selected = state.items.find((item) => item.id === state.selectedItemId);
-  if (!selected) {
-    els.selectionDetails.className = 'selection-panel empty';
-    els.selectionDetails.innerHTML = 'Noch nichts ausgewählt. Aktiviere <strong>Edit</strong> und klicke ein Element im Garten an.';
-    return;
-  }
-
-  els.selectionDetails.className = 'selection-panel';
-  els.selectionDetails.innerHTML = `
-    <strong>${selected.name}</strong>
-    <p>Typ: ${selected.type === 'animal' ? 'Tier' : 'Pflanze'}</p>
-    <p>Position: ${Math.round(selected.x)}% / ${Math.round(selected.y)}%</p>
-    <div class="inspector-actions">
-      <button id="remove-selected" class="btn btn-danger" type="button">Entfernen</button>
-    </div>
-  `;
-
-  document.getElementById('remove-selected').addEventListener('click', () => {
-    refundItem(selected);
-    state.items = state.items.filter((item) => item.id !== selected.id);
-    state.selectedItemId = null;
-    announce(`${selected.name} wurde entfernt. Kosten wurden erstattet.`);
+  els.clearGardenBtn.addEventListener("click", () => {
+    state.placedItems = [];
     persist();
     render();
   });
 }
 
-function updateBanner() {
-  if (state.placementSelection) {
-    const item = getCatalogItem(state.placementSelection);
-    els.statusBanner.textContent = `${item.name} ausgewählt — klicke in den Garten, um das Objekt zu platzieren.`;
-    return;
-  }
-
-  if (state.editMode) {
-    els.statusBanner.textContent = 'Edit aktiv — ziehe Elemente langsam an eine neue Position oder entferne sie im Auswahlfeld.';
-    return;
-  }
-
-  els.statusBanner.textContent = 'Wähle im Shop ein Element aus, um es zu platzieren.';
-}
-
-function placeItem(item, x, y) {
-  const currencyKey = item.currency;
-  if (state[currencyKey] < item.cost) {
-    announce(`Nicht genug ${currencyKey === 'seeds' ? 'Seeds' : 'Eggs'} für ${item.name}.`);
-    return;
-  }
-
-  state[currencyKey] -= item.cost;
-  state.items.push(createPlacedItem(item, x, y));
-  state.placementSelection = null;
-  announce(`${item.name} wurde im Garten platziert.`);
-  persist();
+function switchTab(tab) {
+  const tracker = tab === "tracker";
+  els.trackerTab.classList.toggle("active", tracker);
+  els.gardenTab.classList.toggle("active", !tracker);
+  els.tabButtons.forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
+  checkDateRollover();
   render();
 }
 
-function createPlacedItem(item, x, y) {
-  return {
-    id: crypto.randomUUID(),
-    catalogId: item.id,
-    name: item.name,
-    type: item.type,
-    className: item.className,
-    currency: item.currency,
-    cost: item.cost,
-    speed: item.speed || 0,
-    x,
-    y,
-    directionX: Math.random() > 0.5 ? 1 : -1,
-    directionY: Math.random() > 0.5 ? 1 : -1,
-    wobble: Math.random() * Math.PI * 2,
-    nextDecision: performance.now() + 1200 + Math.random() * 2600
-  };
+function render() {
+  const progress = Math.min(1, Math.max(0, state.dailyFiber / DAILY_GOAL));
+  const streakCycle = state.streakCount % 7;
+  const unlocked = state.dailyFiber >= DAILY_GOAL;
+
+  els.dailyFiberDisplay.textContent = `${state.dailyFiber.toFixed(1)} g / ${DAILY_GOAL} g`;
+  els.dailyProgressBar.style.width = `${progress * 100}%`;
+  els.streakDays.textContent = `${state.streakCount} Tage`;
+  els.streakProgressBar.style.width = `${(streakCycle / 7) * 100}%`;
+  els.eggDisplay.textContent = `Eier: ${state.totalEggs} · Zyklus: ${streakCycle}/7`;
+  els.seedDisplay.textContent = `Samen gesamt: ${state.totalSeeds}`;
+  els.seedPill.textContent = `🌱 Samen: ${state.totalSeeds}`;
+  els.eggPill.textContent = `🥚 Eier: ${state.totalEggs}`;
+
+  els.gateCard.innerHTML = unlocked
+    ? `<h3>Garten freigeschaltet für heute ✅</h3><p class="muted">Du kannst jetzt kaufen und platzieren.</p>`
+    : `<h3>Erreiche 30g Ballaststoffe, um zu pflanzen.</h3><p class="muted">Noch ${(DAILY_GOAL - state.dailyFiber).toFixed(1)} g bis zum Freischalten.</p>`;
+
+  renderFoods();
+  renderShop(unlocked);
+  renderAnimals(unlocked);
+  renderPlacedItems();
 }
 
-function createSprite(item, compact) {
-  const sprite = document.createElement('div');
-  sprite.className = `sprite ${item.type} ${item.className}`;
-  if (compact) sprite.style.scale = '0.9';
+function renderFoods() {
+  els.foodsList.innerHTML = foods.map((food) => `
+    <article class="food-row">
+      <div class="row between">
+        <strong>${food.name}</strong>
+        <span class="food-meta">+Seeds: ${food.seedReward}</span>
+      </div>
+      <p class="food-meta">${food.portionLabel} · Fiber: ${food.fiberGrams.toFixed(1)} g</p>
+      <button class="btn btn-primary" data-food-id="${food.id}">+ Portion</button>
+    </article>
+  `).join("");
 
-  if (item.type === 'animal') {
-    const face = document.createElement('div');
-    face.className = 'face';
-    sprite.appendChild(face);
-    if (item.catalogId === 'deer' || item.id === 'deer') {
-      const antlers = document.createElement('div');
-      antlers.className = 'antlers';
-      sprite.appendChild(antlers);
-    }
+  els.foodsList.querySelectorAll("[data-food-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const food = foods.find((f) => f.id === btn.dataset.foodId);
+      if (!food) return;
+
+      state.dailyFiber += food.fiberGrams;
+      state.totalSeeds += food.seedReward;
+      state.dailyFoodsLog[food.name] = (state.dailyFoodsLog[food.name] || 0) + 1;
+      processGoalReachedIfNeeded();
+      lightHaptic();
+      persist();
+      render();
+    });
+  });
+}
+
+function renderShop(unlocked) {
+  els.shopList.innerHTML = shopItems.map((item) => {
+    const disabled = !unlocked || state.totalSeeds < item.seedCost;
+    return `
+      <article class="shop-row row between">
+        <div>
+          <strong>${item.symbol} ${item.name}</strong>
+          <p class="food-meta">Kosten: ${item.seedCost} Seeds</p>
+        </div>
+        <button class="btn btn-primary" data-shop-id="${item.id}" ${disabled ? "disabled" : ""}>Kaufen & Platzieren</button>
+      </article>
+    `;
+  }).join("");
+
+  els.shopList.querySelectorAll("[data-shop-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item = shopItems.find((s) => s.id === btn.dataset.shopId);
+      if (!item || state.totalSeeds < item.seedCost || state.dailyFiber < DAILY_GOAL) return;
+
+      state.totalSeeds -= item.seedCost;
+      state.placedItems.push({
+        id: crypto.randomUUID(),
+        type: "decoration",
+        name: item.name,
+        symbolName: item.symbol,
+        datePlaced: new Date().toISOString()
+      });
+      successHaptic();
+      persist();
+      render();
+    });
+  });
+}
+
+function renderAnimals(unlocked) {
+  els.animalsList.innerHTML = animalItems.map((item) => {
+    const disabled = !unlocked || state.totalEggs < item.eggCost;
+    return `
+      <article class="shop-row row between">
+        <div>
+          <strong>${item.symbol} ${item.name}</strong>
+          <p class="food-meta">Kosten: ${item.eggCost} Eier</p>
+        </div>
+        <button class="btn btn-primary" data-animal-id="${item.id}" ${disabled ? "disabled" : ""}>Ausbrüten & Platzieren</button>
+      </article>
+    `;
+  }).join("");
+
+  els.animalsList.querySelectorAll("[data-animal-id]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const item = animalItems.find((a) => a.id === btn.dataset.animalId);
+      if (!item || state.totalEggs < item.eggCost || state.dailyFiber < DAILY_GOAL) return;
+
+      state.totalEggs -= item.eggCost;
+      state.placedItems.push({
+        id: crypto.randomUUID(),
+        type: "animal",
+        name: item.name,
+        symbolName: item.symbol,
+        datePlaced: new Date().toISOString()
+      });
+      successHaptic();
+      persist();
+      render();
+    });
+  });
+}
+
+function renderPlacedItems() {
+  if (!state.placedItems.length) {
+    els.placedList.innerHTML = `<div class="card"><p class="muted">Noch nichts platziert. Kaufe im Shop und starte deinen Garten 🌱</p></div>`;
+    return;
   }
 
-  return sprite;
+  els.placedList.innerHTML = state.placedItems.map((item) => {
+    const date = new Date(item.datePlaced).toLocaleDateString("de-DE", { dateStyle: "medium" });
+    const typeLabel = item.type === "animal" ? "Tier" : "Dekoration";
+    return `
+      <article class="placed-row row between">
+        <div>
+          <strong>${item.symbolName} ${item.name}</strong>
+          <p class="food-meta">${typeLabel}</p>
+        </div>
+        <span class="food-meta">${date}</span>
+      </article>
+    `;
+  }).join("");
 }
 
-function onPointerMove(event) {
-  if (!dragState) return;
-  const item = state.items.find((entry) => entry.id === dragState.id);
-  if (!item) return;
+function processGoalReachedIfNeeded(now = new Date()) {
+  if (state.dailyFiber < DAILY_GOAL) return;
 
-  const rect = els.gardenScene.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width) * 100;
-  const y = ((event.clientY - rect.top) / rect.height) * 100;
+  const today = dateString(now);
+  if (state.lastGoalDateString === today) return;
 
-  item.x = clamp(x, 10, 94);
-  item.y = clamp(y, 18, 94);
-  state.selectedItemId = item.id;
-  renderGarden();
-  renderInspector();
-}
-
-function stopDragging() {
-  if (!dragState) return;
-  const node = els.gardenScene.querySelector(`[data-id="${dragState.id}"]`);
-  node?.classList.remove('dragging');
-  dragState = null;
-  persist();
-}
-
-function startAnimation() {
-  cancelAnimationFrame(animationFrame);
-  const tick = (now) => {
-    const dt = Math.min(40, now - lastAnimationTime);
-    lastAnimationTime = now;
-    animateAnimals(now, dt);
-    animationFrame = requestAnimationFrame(tick);
-  };
-  animationFrame = requestAnimationFrame(tick);
-}
-
-function animateAnimals(now, dt) {
-  let changed = false;
-  for (const item of state.items) {
-    if (item.type !== 'animal' || dragState?.id === item.id || state.selectedItemId === item.id && state.editMode) continue;
-
-    if (now > item.nextDecision) {
-      item.directionX = randomDirection();
-      item.directionY = randomDirection();
-      item.nextDecision = now + 1800 + Math.random() * 2800;
-    }
-
-    item.wobble += dt * 0.002;
-    const driftX = item.directionX * item.speed * dt + Math.sin(item.wobble) * 0.012 * dt;
-    const driftY = item.directionY * item.speed * dt + Math.cos(item.wobble * 0.8) * 0.01 * dt;
-
-    item.x = clamp(item.x + driftX * 0.02, 12, 93);
-    item.y = clamp(item.y + driftY * 0.02, 24, 92);
-
-    if (item.x <= 12 || item.x >= 93) item.directionX *= -1;
-    if (item.y <= 24 || item.y >= 92) item.directionY *= -1;
-    changed = true;
+  if (state.lastGoalDateString && isYesterday(state.lastGoalDateString, now)) {
+    state.streakCount += 1;
+  } else {
+    state.streakCount = 1;
   }
 
-  if (!changed) return;
-  for (const node of els.gardenScene.querySelectorAll('.placed-item')) {
-    const item = state.items.find((entry) => entry.id === node.dataset.id);
-    if (!item) continue;
-    node.style.left = `${item.x}%`;
-    node.style.top = `${item.y}%`;
-    node.style.zIndex = String(100 + Math.round(item.y));
+  state.lastGoalDateString = today;
+
+  if (state.streakCount % 7 === 0) {
+    state.totalEggs += 1;
   }
 }
 
-function refundItem(item) {
-  state[item.currency] += item.cost;
+function checkDateRollover(now = new Date()) {
+  const today = dateString(now);
+
+  if (!state.lastDateString) {
+    state.lastDateString = today;
+    persist();
+    return;
+  }
+
+  if (today !== state.lastDateString) {
+    state.dailyFiber = 0;
+    state.dailyFoodsLog = {};
+    state.lastDateString = today;
+    validateStreakAcrossMissedDays(now);
+    persist();
+  }
 }
 
-function getCatalogItem(id) {
-  return [...catalog.plants, ...catalog.animals].find((item) => item.id === id) || null;
+function validateStreakAcrossMissedDays(referenceDate = new Date()) {
+  if (!state.lastGoalDateString) return;
+
+  const lastGoal = parseDate(state.lastGoalDateString);
+  const today = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate());
+  const diff = Math.floor((today - lastGoal) / 86400000);
+
+  if (diff > 1) {
+    state.streakCount = 0;
+  }
 }
 
-function getRelativePosition(event) {
-  const rect = els.gardenScene.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / rect.width) * 100;
-  const y = ((event.clientY - rect.top) / rect.height) * 100;
-  return {
-    x: clamp(x, 10, 94),
-    y: clamp(y, 18, 94)
-  };
+function isYesterday(lastGoalDateString, now = new Date()) {
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  return dateString(yesterday) === lastGoalDateString;
 }
 
-function randomDirection() {
-  const directions = [-1, -0.5, 0.5, 1];
-  return directions[Math.floor(Math.random() * directions.length)];
+function dateString(date) {
+  return date.toISOString().slice(0, 10);
 }
 
-function announce(message) {
-  els.statusBanner.textContent = message;
-}
-
-function clamp(value, min, max) {
-  return Math.min(max, Math.max(min, value));
+function parseDate(yyyyMMdd) {
+  const [y, m, d] = yyyyMMdd.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 function loadState() {
   try {
-    const raw = localStorage.getItem('fiberGardenSandboxState');
+    const raw = localStorage.getItem("fiberGardenState");
     if (!raw) return structuredClone(defaultState);
-    const parsed = JSON.parse(raw);
-    return {
-      ...structuredClone(defaultState),
-      ...parsed,
-      items: Array.isArray(parsed.items) ? parsed.items : structuredClone(defaultState.items)
-    };
+    return { ...structuredClone(defaultState), ...JSON.parse(raw) };
   } catch {
     return structuredClone(defaultState);
   }
 }
 
 function persist() {
-  localStorage.setItem('fiberGardenSandboxState', JSON.stringify(state));
+  localStorage.setItem("fiberGardenState", JSON.stringify(state));
+}
+
+function lightHaptic() {
+  if (navigator.vibrate) navigator.vibrate(10);
+}
+
+function successHaptic() {
+  if (navigator.vibrate) navigator.vibrate([12, 18, 12]);
 }

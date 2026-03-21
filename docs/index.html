@@ -2,90 +2,168 @@
 <html lang="de">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Fiber Garden</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <header class="app-header card">
-        <div>
-          <p class="eyebrow">Digital Garden Game</p>
-          <h1>Fiber Garden</h1>
-          <p class="subtitle">Kaufe Pflanzen mit Seeds, Tiere mit Eggs und gestalte deinen Garten frei.</p>
-        </div>
-        <button id="edit-toggle" class="btn btn-secondary">Edit: Aus</button>
+    <div class="phone-shell">
+      <header class="topbar">
+        <h1>Fiber Garden</h1>
+        <p>Tracke Ballaststoffe, sammle Seeds im Silo & baue deinen Garten.</p>
       </header>
 
-      <main class="layout-grid">
-        <section class="panel-stack">
-          <article class="card stats-card">
-            <div class="currency-pill seeds">🌱 <span id="seed-count">150</span> Seeds</div>
-            <div class="currency-pill eggs">🥚 <span id="egg-count">8</span> Eggs</div>
-            <p class="muted">Wähle links ein Element und platziere es per Klick im Garten. Im Edit-Modus kannst du Objekte verschieben oder entfernen.</p>
+      <main class="content">
+        <section id="tracker-tab" class="tab-panel active" aria-label="Tracker">
+          <article class="card hero-card">
+            <div class="title-row">
+              <h2>Heute</h2>
+              <span class="chip" id="daily-goal-chip">Ziel: 30 g</span>
+            </div>
+            <p id="daily-fiber-display" class="hero-number">0.0 g / 30 g</p>
+            <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="30" aria-valuenow="0" aria-label="Daily Fiber Fortschritt">
+              <div id="daily-progress-bar" class="progress-fill"></div>
+            </div>
           </article>
 
-          <article class="card shop-card">
-            <div class="section-heading">
-              <h2>Pflanzen-Shop</h2>
-              <span class="chip">Seeds</span>
+          <article class="card streak-card">
+            <div class="title-row">
+              <h3>🔥 Streak</h3>
+              <span id="streak-days" class="chip chip-warm">0 Tage</span>
             </div>
-            <div id="plants-shop" class="shop-grid"></div>
+            <div class="progress-track progress-track-thin">
+              <div id="streak-progress-bar" class="progress-fill progress-egg"></div>
+            </div>
+            <p class="muted">Bei 7 Tagen in Folge (≥30g) bekommst du ein Ei.</p>
+            <p id="egg-display" class="meta-strong">Eier: 0 · Zyklus: 0/7</p>
           </article>
 
-          <article class="card shop-card">
-            <div class="section-heading">
-              <h2>Tier-Shop</h2>
-              <span class="chip eggs">Eggs</span>
+          <article class="card silo-card">
+            <div class="title-row">
+              <h3>🌾 Silo</h3>
+              <span id="seed-chip" class="chip chip-green">0 Seeds</span>
             </div>
-            <div id="animals-shop" class="shop-grid"></div>
+            <p class="muted">Für jeden vollen Gramm Ballaststoff bekommst du 1 Seed. Seeds bleiben im Silo, bis du sie im Shop ausgibst.</p>
+          </article>
+
+          <section class="section-head section-head-inline section-head-search">
+            <div>
+              <h3>Lebensmittel</h3>
+              <p class="section-subtitle">Alle Werte sind Gramm Ballaststoffe pro 100 g.</p>
+            </div>
+          </section>
+
+          <article class="card search-card">
+            <label class="search-label" for="food-search">Suche</label>
+            <input id="food-search" class="search-input" type="search" placeholder="Lebensmittel suchen …" autocomplete="off" />
+            <p id="food-search-meta" class="muted search-meta">69 Lebensmittel</p>
+          </article>
+
+          <div id="foods-list" class="stack"></div>
+
+          <article class="card mini-footer">
+            <p id="seed-display" class="meta-strong">Seeds im Silo: 0</p>
+            <button id="reset-day-btn" class="btn btn-secondary">Reset Tag (Debug)</button>
           </article>
         </section>
 
-        <section class="panel-stack garden-column">
-          <article class="card garden-card">
-            <div class="section-heading">
-              <div>
-                <p class="eyebrow">Dein Garten</p>
-                <h2>Freies Platzieren</h2>
-              </div>
-              <button id="clear-garden" class="btn btn-ghost">Alles entfernen</button>
+        <section id="garden-tab" class="tab-panel" aria-label="Garten">
+          <article class="garden-hud card glass-card">
+            <div class="pill-row">
+              <span id="seed-pill" class="pill">🌱 Silo: 0</span>
+              <span id="egg-pill" class="pill">🥚 Eier: 0</span>
             </div>
-
-            <div id="status-banner" class="status-banner">Wähle im Shop ein Element aus, um es zu platzieren.</div>
-
-            <div id="garden-scene" class="garden-scene" aria-label="Garten-Spielfeld">
-              <div class="pond" aria-hidden="true">
-                <div class="lily-pad pad-one"></div>
-                <div class="lily-pad pad-two"></div>
-                <div class="water-flower"></div>
-              </div>
-              <div class="scene-glow"></div>
+            <div class="garden-hud-actions">
+              <button id="edit-garden-btn" class="btn btn-secondary">Bearbeiten</button>
             </div>
           </article>
 
-          <article class="card inspector-card">
-            <div class="section-heading">
-              <h2>Auswahl</h2>
-              <span id="selected-mode" class="chip subtle">Kein Objekt</span>
+          <article class="card" id="gate-card"></article>
+
+          <article class="garden-diorama card">
+            <div id="edit-toolbar" class="edit-toolbar hidden">
+              <p id="edit-status" class="muted edit-status">Wähle ein Objekt und dann eine Position im Garten.</p>
+              <div class="edit-actions">
+                <button id="place-item-btn" class="btn btn-primary" disabled>Platzieren</button>
+                <button id="cancel-edit-btn" class="btn btn-ghost">Abbrechen</button>
+              </div>
             </div>
-            <div id="selection-details" class="selection-panel empty">
-              Noch nichts ausgewählt. Aktiviere <strong>Edit</strong> und klicke ein Element im Garten an.
+
+            <div id="garden-viewport" class="garden-viewport" aria-label="Gartenraum">
+              <div id="garden-scene" class="garden-scene">
+                <div class="sky-layer"></div>
+                <div class="sun-glow"></div>
+                <div class="cloud cloud-a"></div>
+                <div class="cloud cloud-b"></div>
+                <div class="room-back-wall"></div>
+                <div class="room-side-wall room-left-wall"></div>
+                <div class="room-side-wall room-right-wall"></div>
+                <div class="far-hills"></div>
+                <div class="scene-sparkles sparkle-a"></div>
+                <div class="scene-sparkles sparkle-b"></div>
+                <div class="scene-birds bird-a"></div>
+                <div class="scene-birds bird-b"></div>
+                <div class="garden-island-shadow"></div>
+                <div class="room-floor-rim"></div>
+                <div class="garden-island"></div>
+                <div class="garden-path main-lane"></div>
+                <div class="garden-path side-lane"></div>
+                <div class="garden-pond"></div>
+                <div class="garden-flowerbed flowerbed-a"></div>
+                <div class="garden-flowerbed flowerbed-b"></div>
+                <div class="garden-rock rock-a"></div>
+                <div class="garden-rock rock-b"></div>
+                <div class="grass-clump grass-a"></div>
+                <div class="grass-clump grass-b"></div>
+                <div class="grass-clump grass-c"></div>
+                <div class="pen-fence fence-back"></div>
+                <div class="pen-fence fence-left"></div>
+                <div class="pen-fence fence-right"></div>
+                <div class="pen-fence fence-front"></div>
+                <div class="mini-barn barn-left"></div>
+                <div class="mini-barn barn-right"></div>
+                <div class="hay-bale hay-a"></div>
+                <div class="hay-bale hay-b"></div>
+                <div class="garden-foreground"></div>
+                <div class="room-corner room-corner-left"></div>
+                <div class="room-corner room-corner-right"></div>
+                <div class="garden-scene-hint">Cozy paddock view</div>
+                <div id="garden-grid" class="garden-grid hidden"></div>
+                <div id="garden-empty-overlay" class="garden-empty-overlay hidden"></div>
+                <div id="garden-objects" class="garden-objects"></div>
+              </div>
             </div>
           </article>
+
+          <section class="section-head">
+            <h3>Shop – Pflanzen</h3>
+          </section>
+          <div id="shop-list" class="stack"></div>
+
+          <section class="section-head">
+            <h3>Tiere (Eier)</h3>
+          </section>
+          <div id="animals-list" class="stack"></div>
+
+          <section class="section-head section-head-inline">
+            <h3>Dein Garten (Liste)</h3>
+            <button id="clear-garden-btn" class="btn btn-ghost">Alles entfernen</button>
+          </section>
+          <div id="placed-list" class="stack"></div>
         </section>
       </main>
-    </div>
 
-    <template id="shop-item-template">
-      <button class="shop-item" type="button">
-        <div class="shop-art"></div>
-        <div>
-          <strong class="shop-name"></strong>
-          <p class="shop-price"></p>
-        </div>
-      </button>
-    </template>
+      <nav class="tabbar" aria-label="Tabs">
+        <button class="tab-button active" data-tab="tracker" aria-label="Tracker Tab">
+          <span class="tab-icon">📋</span>
+          <span class="tab-label">Tracker</span>
+        </button>
+        <button class="tab-button" data-tab="garden" aria-label="Garten Tab">
+          <span class="tab-icon">🌱</span>
+          <span class="tab-label">Garten</span>
+        </button>
+      </nav>
+    </div>
 
     <script src="app.js"></script>
   </body>
